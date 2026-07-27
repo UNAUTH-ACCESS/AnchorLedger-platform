@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useApi } from "../../hooks/useApi";
 import { portfolios as portfoliosApi, wallets as walletsApi } from "../../api/endpoints";
 import client from "../../api/client";
@@ -373,6 +374,7 @@ function TwoFactorSetup() {
 export default function Settings() {
   const { user, activeWorkspace } = useAuthStore();
   const { canManagePortfolios, isAccountAdmin } = usePermissions();
+  const navigate = useNavigate();
   const { wsStatus, regime }      = useSystemStore();
   const regMeta = regime ? regimeMeta[regime.state] : null;
 
@@ -393,6 +395,48 @@ export default function Settings() {
           <Row label="Email"     value={user?.email}/>
           <Row label="Workspace" value={activeWorkspace?.name}/>
           <Row label="Role"      value={activeWorkspace?.role} valueColor={colors.green}/>
+        </Section>
+
+        <Section title="Identity Verification">
+          <Row
+            label="Status"
+            value={
+              user?.kycStatus === "APPROVED" ? "Approved" :
+              user?.kycStatus === "PENDING_REVIEW" ? "Pending Review" :
+              user?.kycStatus === "REJECTED" ? "Rejected" :
+              "Not Submitted"
+            }
+            valueColor={
+              user?.kycStatus === "APPROVED" ? colors.green :
+              user?.kycStatus === "REJECTED" ? colors.red :
+              user?.kycStatus === "PENDING_REVIEW" ? colors.orange :
+              colors.muted
+            }
+          />
+          {user?.kycStatus !== "APPROVED" && user?.kycStatus !== "PENDING_REVIEW" && (
+            <button
+              onClick={() => navigate("/kyc")}
+              style={{
+                width: "100%", background: colors.green + "22", border: `1px solid ${colors.green}55`,
+                borderRadius: 6, padding: "10px 14px", fontSize: 12, fontWeight: 600,
+                color: colors.green, cursor: "pointer", marginTop: 8,
+              }}
+            >
+              {user?.kycStatus === "REJECTED" ? "Resubmit Verification" : "Verify Identity"}
+            </button>
+          )}
+          {user?.kycStatus === "PENDING_REVIEW" && (
+            <button
+              onClick={() => navigate("/kyc")}
+              style={{
+                width: "100%", background: "transparent", border: `1px solid ${colors.border2}`,
+                borderRadius: 6, padding: "10px 14px", fontSize: 12, fontWeight: 600,
+                color: colors.muted, cursor: "pointer", marginTop: 8,
+              }}
+            >
+              View Status
+            </button>
+          )}
         </Section>
 
         <Section title="Subscription">

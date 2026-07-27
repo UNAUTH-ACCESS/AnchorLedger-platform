@@ -101,8 +101,17 @@ export const audit = {
 export const kyc = {
   // User-facing
   status: () => client.get("/kyc/status"),
+  // client.js's axios instance sets a default Content-Type:application/json
+  // header at creation time, which applies to every request through it -
+  // correct for the JSON calls that make up the rest of this file, but it
+  // overrides axios's automatic FormData boundary detection for this one
+  // upload call unless explicitly unset here. Setting it to undefined (not
+  // omitting it, and not a fixed multipart/form-data string) is what lets
+  // axios generate the real header including the boundary parameter -
+  // confirmed via server logs: without this, multer received zero files
+  // even though the multipart body looked correct in the browser.
   submit: (formData) => client.post("/kyc/submit", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: { "Content-Type": undefined },
   }),
 
   // Admin-only (backend enforces requirePlatformAdmin regardless of what the

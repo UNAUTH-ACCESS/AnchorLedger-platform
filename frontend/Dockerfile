@@ -4,7 +4,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build
+# 768MB, not 2048MB - the VPS this builds on has only 1.9GB total RAM, with
+# postgres/api/worker/dockerd and unrelated services already using most of
+# it under normal operation. Allowing Node to try growing toward 2GB during
+# a build guaranteed severe swap thrashing (swap fully exhausted, SSH
+# connection dropping mid-build) rather than actually helping - a lower,
+# realistic ceiling forces more frequent GC instead of thrashing.
+RUN NODE_OPTIONS="--max-old-space-size=768" npm run build
 
 # Stage 2 — serve with Nginx
 FROM nginx:alpine

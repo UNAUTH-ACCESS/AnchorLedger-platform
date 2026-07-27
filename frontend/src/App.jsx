@@ -23,6 +23,7 @@ import PnLDashboard  from "./pages/pnl/PnLDashboard";
 import SubscribePage   from "./pages/subscribe/SubscribePage";
 import OnboardingPage from "./pages/onboarding/OnboardingPage";
 import AdminKycQueue from "./pages/admin/AdminKycQueue";
+import KycSubmission from "./pages/kyc/KycSubmission";
 
 function AuthenticatedApp() {
   useSocket(); // Initialize WebSocket connection
@@ -53,6 +54,7 @@ function AuthenticatedApp() {
         <Route path="/wallets"   element={<WalletConnect/>} />
         <Route path="/pnl"      element={<PnLDashboard/>} />
         <Route path="/admin/kyc"  element={<AdminKycQueue/>} />
+        <Route path="/kyc"        element={<KycSubmission/>} />
         <Route path="*"           element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AppShell>

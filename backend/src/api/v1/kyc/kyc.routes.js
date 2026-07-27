@@ -22,6 +22,7 @@ const { authenticate, requireWorkspace, requirePlatformAdmin } = require("../../
 const { AppError } = require("../../../middleware/error");
 const { encryptField, decryptField, encryptFileToDisk, decryptFileFromDisk } = require("../../../lib/kycCrypto");
 const { kycSubmitLimiter } = require("../../../middleware/rateLimit");
+const logger = require("../../../lib/logger");
 
 // In-memory upload, 8MB cap per file, images/pdf only
 const upload = multer({
@@ -71,12 +72,27 @@ router.post(
 
       if (!legalName || !dateOfBirth || !countryResidence || !countryCitizenship ||
           !address || !idType || !idNumber) {
+        logger.warn("[kyc] Submit rejected - missing field(s)", {
+          userId: req.user.id,
+          legalName: !!legalName, dateOfBirth: !!dateOfBirth,
+          countryResidence: !!countryResidence, countryCitizenship: !!countryCitizenship,
+          address: !!address, idType: !!idType, idNumber: !!idNumber,
+        });
         throw new AppError("Missing required fields", 400, "VALIDATION_ERROR");
       }
       if (![attestNotPep, attestNoSanctions, attestAccurate].every((v) => v === "true" || v === true)) {
+        logger.warn("[kyc] Submit rejected - attestation(s) not confirmed", {
+          userId: req.user.id, attestNotPep, attestNoSanctions, attestAccurate,
+        });
         throw new AppError("All attestations must be confirmed", 400, "VALIDATION_ERROR");
       }
       if (!req.files?.idDocFront?.[0] || !req.files?.selfie?.[0]) {
+        logger.warn("[kyc] Submit rejected - missing required file(s)", {
+          userId: req.user.id,
+          hasIdDocFront: !!req.files?.idDocFront?.[0],
+          hasSelfie: !!req.files?.selfie?.[0],
+          filesReceived: Object.keys(req.files || {}),
+        });
         throw new AppError("ID document front and selfie are required", 400, "VALIDATION_ERROR");
       }
 
