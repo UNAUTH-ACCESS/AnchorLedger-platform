@@ -31,6 +31,7 @@ router.get("/", authenticate, requireWorkspace, async (req, res, next) => {
         include: {
           wallet: { include: { chain: true } },
           venue: true,
+          asset: true,
           evaluation: { include: { signal: { include: { asset: true } } } },
           transaction: true,
           fill: true,
@@ -56,6 +57,7 @@ router.get("/:id", authenticate, async (req, res, next) => {
       include: {
         wallet: { include: { chain: true } },
         venue: true,
+        asset: true,
         evaluation: { include: { signal: { include: { asset: true, signalConfig: true } } } },
         transaction: true,
         fill: true,

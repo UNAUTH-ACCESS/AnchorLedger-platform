@@ -396,9 +396,10 @@ model Asset {
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
 
-  signals   Signal[]
-  fills     Fill[]
-  positions Position[]
+  signals        Signal[]
+  fills          Fill[]
+  positions      Position[]
+  tradeProposals TradeProposal[]
 
   @@index([symbol])
   @@map("assets")
@@ -697,6 +698,7 @@ model TradeProposal {
   venueId       String
   venue         Venue         @relation(fields: [venueId], references: [id])
   assetId       String
+  asset         Asset         @relation(fields: [assetId], references: [id])
   direction     SignalDirection
   notional      Float
   estEntry      Float

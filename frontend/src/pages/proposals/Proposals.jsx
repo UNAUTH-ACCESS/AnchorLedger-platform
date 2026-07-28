@@ -13,7 +13,7 @@ function SignModal({ proposal, onClose, onDone }) {
   const [error, setError] = useState(null);
 
   const signal = proposal.evaluation?.signal;
-  const asset  = signal?.asset;
+  const asset  = proposal.asset || signal?.asset;
   const dirColor = proposal.direction === "LONG" ? colors.green : colors.red;
 
   const sign = async () => {
@@ -213,11 +213,12 @@ function ProposalRow({ proposal, onSign }) {
   const s = statusMap[proposal.status] || { label: proposal.status, color: colors.muted };
   const dirColor = proposal.direction === "LONG" ? colors.green : colors.red;
   const signal = proposal.evaluation?.signal;
+  const rowAsset = proposal.asset || signal?.asset;
 
   return (
     <tr style={{ borderBottom: `1px solid ${colors.border}` }}>
       <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600 }}>
-        {signal?.asset?.symbol || "—"}/USDT
+        {rowAsset?.symbol || "—"}/USDT
       </td>
       <td style={{ padding: "10px 12px" }}>
         <span style={{
