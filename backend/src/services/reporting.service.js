@@ -12,6 +12,14 @@
 const prisma = require("../lib/prisma");
 const logger = require("../lib/logger");
 
+// Single source of truth for annualization: derive periods-per-year from the
+// actual configured snapshot cadence (same env var the worker uses to take
+// snapshots) instead of a hardcoded assumption that can silently drift out
+// of sync if SNAPSHOT_INTERVAL_MS ever changes.
+const SNAPSHOT_INTERVAL_MS = parseInt(process.env.SNAPSHOT_INTERVAL_MS || "300000");
+const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
+const PERIODS_PER_YEAR = MS_PER_YEAR / SNAPSHOT_INTERVAL_MS;
+
 /**
  * Generate a full performance report for a portfolio over a time range.
  *
@@ -139,9 +147,8 @@ async function generateReport(portfolioId, period = "monthly") {
       returnPct:   round(navReturn, 2),
       maxDrawdown: round(maxDrawdown, 2),
       sharpe:      round(sharpe, 3),
-      // Annualized volatility (std dev of periodic returns). Shares the same
-      // periodsPerYear assumption as Sharpe below - only correct if snapshot
-      // cadence really matches that assumption.
+      // Annualized volatility (std dev of periodic returns). periodsPerYear
+      // is derived from the real SNAPSHOT_INTERVAL_MS, shared with Sharpe below.
       volatility:  round(volatility, 4),
     },
 
@@ -198,7 +205,7 @@ function computeReturns(navSeries) {
   return returns;
 }
 
-function computeSharpe(navSeries, periodsPerYear = 17520) {
+function computeSharpe(navSeries, periodsPerYear = PERIODS_PER_YEAR) {
   if (navSeries.length < 3) return 0;
   const returns = computeReturns(navSeries);
   if (returns.length < 2) return 0;
@@ -209,11 +216,9 @@ function computeSharpe(navSeries, periodsPerYear = 17520) {
 
 // Annualized volatility: std dev of periodic returns scaled by sqrt(periods
 // per year) - the standard annualization used for Sharpe's denominator too.
-// NOTE: periodsPerYear=17520 assumes a snapshot every 30 minutes
-// (2 * 24 * 365 = 17520). If SNAPSHOT_INTERVAL_MS changes, this assumption
-// silently becomes wrong for both this and Sharpe above - not fixed here,
-// flagged for a future pass.
-function computeVolatility(navSeries, periodsPerYear = 17520) {
+// periodsPerYear is derived from SNAPSHOT_INTERVAL_MS (see PERIODS_PER_YEAR
+// above), so this stays correct even if the snapshot cadence changes.
+function computeVolatility(navSeries, periodsPerYear = PERIODS_PER_YEAR) {
   if (navSeries.length < 3) return 0;
   const returns = computeReturns(navSeries);
   if (returns.length < 2) return 0;
