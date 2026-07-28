@@ -111,6 +111,7 @@ function buildDeepLink(entityType, entityId) {
     Position:      "/positions",
     Signal:        "/signals",
     Portfolio:     "/portfolio",
+    KycSubmission: "/kyc",
   };
   return paths[entityType] || "/dashboard";
 }

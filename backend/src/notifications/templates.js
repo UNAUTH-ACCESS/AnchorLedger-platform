@@ -137,6 +137,29 @@ function buildNotification(eventType, data = {}) {
         entityType: "Portfolio",
       };
 
+    // ── KYC ──────────────────────────────────────────────────────────────
+    case "KYC_APPROVED":
+      return {
+        type:       "SYSTEM",
+        priority:   PRIORITY.HIGH,
+        title:      "✅ Identity verification approved",
+        body:       "Your identity verification has been approved. You now have full access to trading features.",
+        entityId:   data.kycSubmissionId,
+        entityType: "KycSubmission",
+      };
+
+    case "KYC_REJECTED":
+      return {
+        type:       "SYSTEM",
+        priority:   PRIORITY.HIGH,
+        title:      "⚠️ Identity verification needs attention",
+        body:       data.reviewNotes
+          ? `Your identity verification could not be approved: ${data.reviewNotes}`
+          : "Your identity verification could not be approved. Please review and resubmit your documents.",
+        entityId:   data.kycSubmissionId,
+        entityType: "KycSubmission",
+      };
+
     default:
       return {
         type:       "SYSTEM",
@@ -157,6 +180,7 @@ function entityPath(entityType, entityId) {
     Signal:        `/signals`,
     Portfolio:     `/portfolio`,
     SignalConfig:  `/settings`,
+    KycSubmission: `/kyc`,
   };
   return paths[entityType] || "/dashboard";
 }

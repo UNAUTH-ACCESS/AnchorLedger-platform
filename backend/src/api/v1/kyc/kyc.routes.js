@@ -18,6 +18,7 @@ const multer = require("multer");
 const router = express.Router();
 
 const prisma = require("../../../lib/prisma");
+const { notify } = require("../../../notifications/router");
 const { authenticate, requireWorkspace, requirePlatformAdmin } = require("../../../middleware/auth");
 const { AppError } = require("../../../middleware/error");
 const { encryptField, decryptField, encryptFileToDisk, decryptFileFromDisk } = require("../../../lib/kycCrypto");
@@ -165,7 +166,7 @@ router.get("/admin/pending", authenticate, requirePlatformAdmin, async (req, res
         idType: true, submittedAt: true,
       },
     });
-    return res.json({ success: true, pending });
+    return res.json({ success: true, data: { pending } });
   } catch (err) {
     next(err);
   }
@@ -205,8 +206,10 @@ router.get("/admin/:id", authenticate, requirePlatformAdmin, async (req, res, ne
 
     return res.json({
       success: true,
-      submission: { ...submission, idNumberEncrypted: undefined, idNumber },
-      documents: { idDocFront, idDocBack, selfie },
+      data: {
+        submission: { ...submission, idNumberEncrypted: undefined, idNumber },
+        documents: { idDocFront, idDocBack, selfie },
+      },
     });
   } catch (err) {
     next(err);
@@ -263,9 +266,14 @@ router.post("/admin/:id/review", authenticate, requirePlatformAdmin, async (req,
       }).catch((err) => {
         console.error("KYC audit log (review) failed:", err);
       });
-    }
 
-    // TODO: trigger notification email to user on decision (reuse existing Resend setup)
+      await notify(
+        submission.userId,
+        ownerMembership.workspaceId,
+        decision === "APPROVED" ? "KYC_APPROVED" : "KYC_REJECTED",
+        { kycSubmissionId: submission.id, reviewNotes: notes || null }
+      );
+    }
 
     return res.json({ success: true, status: submission.status });
   } catch (err) {
