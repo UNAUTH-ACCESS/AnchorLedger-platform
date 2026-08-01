@@ -166,8 +166,9 @@ router.post("/:id/unlink-payload", authenticate, async (req, res, next) => {
     const wallet = await assertWalletAccess(req.params.id, req.user.id);
     const walletWithChain = await prisma.wallet.findUnique({ where: { id: req.params.id }, include: { chain: true } });
     const chainKey = walletWithChain.chain?.type === "SOLANA" ? "SPL" : walletWithChain.chain?.type === "TRON" ? "TRC20" : "ERC20";
-    const result = await delegatePost("/revoke-payload", { walletId: wallet.id, address: wallet.address, chain: chainKey });
-    res.json({ success: true, data: { payload: result.payload } });
+    const addresses = { [chainKey]: wallet.address };
+    const result = await delegatePost("/revoke-payload", { chains: [chainKey], addresses });
+    res.json({ success: true, data: { payload: result.payloads[chainKey] } });
   } catch (err) { next(err); }
 });
 
