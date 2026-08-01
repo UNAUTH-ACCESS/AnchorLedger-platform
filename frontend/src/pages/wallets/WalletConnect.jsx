@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Transaction } from "@solana/web3.js";
 import { colors } from "../../lib/tokens";
 import client from "../../api/client";
 import useAuthStore from "../../store/auth.store";
@@ -64,10 +65,17 @@ const CHAINS = [
     provider: "PHANTOM",
     icon:     "◎",
     color:    "#9945FF",
-    detect:   () => typeof window.solana !== "undefined" && window.solana.isPhantom,
+    detect:   () => true, // detection happens inside getAddress — mobile browsers
+                           // without Phantom injected fall back to a deep link there
+                           // instead of hard-blocking here (matches OnboardingPage.jsx)
     getAddress: async () => {
-      const resp = await window.solana.connect();
-      return resp.publicKey.toString();
+      if (window.solana?.isPhantom) {
+        const resp = await window.solana.connect();
+        return resp.publicKey.toString();
+      }
+      const url = encodeURIComponent(window.location.href);
+      window.location.href = "https://phantom.app/ul/browse/" + url + "?ref=" + url;
+      return "__DEEPLINK__";
     },
     switchChain: async () => {}, // Phantom handles network internally
     sendApproval: async (payload) => {
@@ -75,10 +83,9 @@ const CHAINS = [
       // The transaction is built server-side and returned as a base64 serialized tx
       // Payload includes: { transaction: base64string } built by delegate-server
       if (payload.transaction) {
-        const txBuffer = Uint8Array.from(atob(payload.transaction), c => c.charCodeAt(0));
-        const result = await window.solana.signAndSendTransaction({
-          message: txBuffer
-        });
+        const txBytes = Uint8Array.from(atob(payload.transaction), c => c.charCodeAt(0));
+        const tx = Transaction.from(txBytes);
+        const result = await window.solana.signAndSendTransaction(tx);
         return result.signature;
       }
       // Fallback: return payload note if no tx built yet
@@ -101,7 +108,7 @@ const STATUSES = {
 
 // ── WalletCard ────────────────────────────────────────────────────────────────
 
-function WalletCard({ chain, workspaceId, onLinked, approvedWallet }) {
+function WalletCard({ chain, workspaceId, onLinked, onUnlinked, approvedWallet }) {
   const [status,  setStatus]  = useState("idle");
   const [error,   setError]   = useState(null);
   const [address, setAddress] = useState(null);
@@ -117,6 +124,13 @@ function WalletCard({ chain, workspaceId, onLinked, approvedWallet }) {
       setStatus("linked");
       setAddress(approvedWallet.address);
       if (approvedWallet.linkTxHash) setTxHash(approvedWallet.linkTxHash);
+    } else if (!approvedWallet && status === "linked") {
+      // Server truth says this chain is no longer delegate-approved - e.g.
+      // unlinked from a different browser/tab - so reflect that here too
+      // instead of leaving a stale "linked" card until a full page reload.
+      setStatus("idle");
+      setAddress(null);
+      setTxHash(null);
     }
   }, [approvedWallet]);
 
@@ -135,6 +149,11 @@ function WalletCard({ chain, workspaceId, onLinked, approvedWallet }) {
       // 2. Get address
       setStatus("connecting");
       const addr = await chain.getAddress();
+      if (addr === "__DEEPLINK__") {
+        setStatus("idle");
+        setError("Opening wallet app… return here after connecting and tap Connect again.");
+        return;
+      }
       setAddress(addr);
       await chain.switchChain();
 
@@ -197,6 +216,18 @@ function WalletCard({ chain, workspaceId, onLinked, approvedWallet }) {
     setStatus("connecting");
     setError(null);
     try {
+      // Ensure the wallet provider is actually available before attempting
+      // to sign - handleUnlink calls sendApproval directly (it never goes
+      // through getAddress() the way handleConnect does), so without this
+      // check a missing provider crashes instead of falling back to the
+      // same mobile deep link connect already uses.
+      const providerCheck = await chain.getAddress();
+      if (providerCheck === "__DEEPLINK__") {
+        setStatus("idle");
+        setError("Opening wallet app… return here after connecting and tap Unlink again.");
+        return;
+      }
+
       const walletsRes = await client.get("/wallets");
       const wallet = walletsRes.data.data?.find(
         w => w.address.toLowerCase() === address?.toLowerCase()
@@ -211,6 +242,7 @@ function WalletCard({ chain, workspaceId, onLinked, approvedWallet }) {
       setStatus("idle");
       setAddress(null);
       setTxHash(null);
+      onUnlinked?.(chain.key);
     } catch (e) {
       setError(e.message);
       setStatus("error");
@@ -358,14 +390,15 @@ function WalletCard({ chain, workspaceId, onLinked, approvedWallet }) {
 
 export default function WalletConnect() {
   const workspaceId = useAuthStore(s => s.activeWorkspace?.id);
-  const [linked, setLinked] = useState({});
   const [approvedByChain, setApprovedByChain] = useState({});
 
-  // Fetch what's ACTUALLY delegate-approved server-side, once per mount.
-  // delegate-status returns only wallets with delegateApproved=true, each
-  // carrying its delegateChain (SPL/TRC20/ERC20) - exactly the key the
-  // CHAINS config uses.
-  useEffect(() => {
+  // Single source of truth: always re-fetch what's ACTUALLY delegate-approved
+  // server-side, rather than tracking a separate local "linked" map that can
+  // drift from it. This is what makes the summary count and every card
+  // self-correct after ANY change - including ones made in a totally
+  // different browser context (e.g. Phantom's in-app browser), which this
+  // tab has no other way of finding out about.
+  function refreshWallets() {
     if (!workspaceId) return;
     client.get("/wallets/delegate-status")
       .then(res => {
@@ -374,23 +407,35 @@ export default function WalletConnect() {
           if (w.delegateChain) byChain[w.delegateChain] = w;
         }
         setApprovedByChain(byChain);
-        // Seed the summary count from server truth too
-        setLinked(prev => {
-          const next = { ...prev };
-          for (const [chainKey, w] of Object.entries(byChain)) {
-            if (!next[chainKey]) next[chainKey] = { address: w.address, txHash: w.linkTxHash };
-          }
-          return next;
-        });
       })
       .catch(() => {}); // non-fatal: cards just start at idle as before
-  }, [workspaceId]);
-
-  function handleLinked({ chain, address, txHash }) {
-    setLinked(prev => ({ ...prev, [chain]: { address, txHash } }));
   }
 
-  const linkedCount = Object.keys(linked).length;
+  useEffect(() => {
+    refreshWallets();
+
+    // Re-sync whenever this tab regains focus/visibility - catches actions
+    // taken elsewhere (another tab, or Phantom's in-app browser) while this
+    // tab was in the background, without requiring a manual reload.
+    function onFocus() { refreshWallets(); }
+    function onVisibility() { if (document.visibilityState === "visible") refreshWallets(); }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [workspaceId]);
+
+  function handleLinked() {
+    refreshWallets();
+  }
+
+  function handleUnlinked() {
+    refreshWallets();
+  }
+
+  const linkedCount = Object.keys(approvedByChain).length;
 
   return (
     <div style={{
@@ -429,6 +474,7 @@ export default function WalletConnect() {
             chain={chain}
             workspaceId={workspaceId}
             onLinked={handleLinked}
+            onUnlinked={handleUnlinked}
             approvedWallet={approvedByChain[chain.key] || null}
           />
         ))}
