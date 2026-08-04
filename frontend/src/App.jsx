@@ -11,6 +11,8 @@ import { signals as signalsApi } from "./api/endpoints";
 import LoginPage    from "./pages/login/LoginPage";
 import SignupPage   from "./pages/login/SignupPage";
 import VerifyEmailPage from "./pages/verify-email/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/forgot-password/ForgotPasswordPage";
+import ResetPasswordPage  from "./pages/reset-password/ResetPasswordPage";
 import Dashboard    from "./pages/dashboard/Dashboard";
 import Signals      from "./pages/signals/Signals";
 import Proposals    from "./pages/proposals/Proposals";
@@ -73,6 +75,8 @@ export default function App() {
       <Route path="/login" element={<LoginPage/>} />
       <Route path="/signup" element={<SignupPage/>} />
       <Route path="/verify-email" element={<VerifyEmailPage/>} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage/>} />
+      <Route path="/reset-password" element={<ResetPasswordPage/>} />
       <Route path="/subscribe" element={<SubscribePage/>} />
       <Route path="/onboarding" element={<RouteGuard onboardingExempt><OnboardingPage/></RouteGuard>} />
       <Route path="/unsubscribe" element={<SubscribePage/>} />

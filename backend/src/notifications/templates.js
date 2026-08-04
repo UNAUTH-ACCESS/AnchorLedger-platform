@@ -160,6 +160,17 @@ function buildNotification(eventType, data = {}) {
         entityType: "KycSubmission",
       };
 
+    // ── AUTH ─────────────────────────────────────────────────────────────
+    case "PASSWORD_RESET_REQUESTED":
+      return {
+        type:       "SYSTEM",
+        priority:   PRIORITY.HIGH,
+        title:      "🔑 Password reset requested",
+        body:       `We received a request to reset your password. Use this link to set a new one — it expires in 1 hour and can only be used once: ${data.resetUrl} — if you didn't request this, you can safely ignore this email.`,
+        entityId:   null,
+        entityType: null,
+      };
+
     default:
       return {
         type:       "SYSTEM",

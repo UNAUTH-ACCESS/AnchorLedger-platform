@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import useAuthStore from "../../store/auth.store";
 import NotificationCenter from "../notifications/NotificationCenter";
 import useSystemStore from "../../store/system.store";
@@ -73,14 +73,8 @@ function RegimeOrb({ regime }) {
 }
 
 function Sidebar({ onNav }) {
-  const { user, activeWorkspace, logout } = useAuthStore();
+  const { user, activeWorkspace } = useAuthStore();
   const { regime, unreadCount } = useSystemStore();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
 
   return (
     <aside style={{
@@ -168,28 +162,15 @@ function Sidebar({ onNav }) {
             </div>
           </div>
         </div>
-        <button onClick={handleLogout} style={{
-          width: "100%",
-          background: "transparent",
-          border: `1px solid ${colors.border2}`,
-          borderRadius: 4,
-          padding: "6px",
-          fontSize: 10,
-          fontFamily: "'JetBrains Mono', monospace",
-          color: colors.muted,
-          cursor: "pointer",
-          letterSpacing: "0.04em",
-        }}>
-          Sign out
-        </button>
       </div>
     </aside>
   );
 }
 
 function BottomNav() {
-  const { unreadCount } = useSystemStore();
-  const SHORT_NAV = NAV.slice(0, 5);
+  const SHORT_NAV = NAV.slice(0, 5).map(item =>
+    item.to === "/signals" ? { to: "/settings", label: "Settings", icon: "⚙" } : item
+  );
   return (
     <nav style={{
       position: "fixed", bottom: 0, left: 0, right: 0,
@@ -212,17 +193,6 @@ function BottomNav() {
         })}>
           <span style={{ fontSize: 16 }}>{icon}</span>
           <span style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.04em" }}>{label}</span>
-          {label === "Signals" && unreadCount > 0 && (
-            <span style={{
-              position: "absolute", top: 6, right: "25%",
-              background: colors.green, color: colors.bg,
-              fontSize: 8, fontWeight: 700,
-              padding: "0 4px", borderRadius: 3,
-              fontFamily: "'JetBrains Mono', monospace",
-            }}>
-              {unreadCount}
-            </span>
-          )}
         </NavLink>
       ))}
     </nav>

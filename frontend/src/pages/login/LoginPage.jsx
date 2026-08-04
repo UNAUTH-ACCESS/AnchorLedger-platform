@@ -121,6 +121,11 @@ export default function LoginPage() {
                 outline: "none",
               }}
             />
+            <div style={{ textAlign: "right", marginTop: 8 }}>
+              <a href="/forgot-password" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted, textDecoration: "none" }}>
+                Forgot password?
+              </a>
+            </div>
           </div>
 
           {/* Error */}

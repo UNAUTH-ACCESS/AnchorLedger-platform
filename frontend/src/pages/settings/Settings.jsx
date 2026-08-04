@@ -372,7 +372,7 @@ function TwoFactorSetup() {
 }
 
 export default function Settings() {
-  const { user, activeWorkspace } = useAuthStore();
+  const { user, activeWorkspace, logout } = useAuthStore();
   const { canManagePortfolios, isAccountAdmin } = usePermissions();
   const navigate = useNavigate();
   const { wsStatus, regime }      = useSystemStore();
@@ -384,18 +384,16 @@ export default function Settings() {
   const portfolio = portfolios?.[0];
   const rc = portfolio?.riskConfig;
 
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <h1 style={{ fontSize: 16, fontWeight: 600 }}>Settings</h1>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-
-        <Section title="Account">
-          <Row label="Name"      value={user?.name}/>
-          <Row label="Email"     value={user?.email}/>
-          <Row label="Workspace" value={activeWorkspace?.name}/>
-          <Row label="Role"      value={activeWorkspace?.role} valueColor={colors.green}/>
-        </Section>
 
         <Section title="Identity Verification">
           <Row
@@ -532,6 +530,23 @@ export default function Settings() {
           <Row label="Price feed"        value="30 seconds"/>
           <Row label="Snapshot interval" value="5 minutes"/>
           <Row label="Version"           value="0.1.0-mvp"/>
+        </Section>
+
+        <Section title="Account">
+          <Row label="Name"      value={user?.name}/>
+          <Row label="Email"     value={user?.email}/>
+          <Row label="Workspace" value={activeWorkspace?.name}/>
+          <Row label="Role"      value={activeWorkspace?.role} valueColor={colors.green}/>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: "100%", background: colors.red + "22", border: `1px solid ${colors.red}55`,
+              borderRadius: 6, padding: "10px 14px", fontSize: 12, fontWeight: 600,
+              color: colors.red, cursor: "pointer", marginTop: 8,
+            }}
+          >
+            Sign Out
+          </button>
         </Section>
 
       </div>

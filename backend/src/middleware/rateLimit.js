@@ -47,4 +47,18 @@ const kycSubmitLimiter = rateLimit({
   message: { success: false, error: { message: "Too many submission attempts. Try again later.", code: "RATE_LIMITED" } },
 });
 
-module.exports = { loginLimiter, twoFactorLimiter, kycSubmitLimiter };
+// Forgot-password: generates a token and (attempts to) send an email per
+// request, and the endpoint intentionally responds identically whether or
+// not the email exists — without a limit here, that response-time/shape
+// uniformity is the only thing stopping an account-enumeration or mail-bomb
+// loop. 5 per 15 min per IP is well above what a real user needs (one
+// request, maybe a retry) while blocking automated hammering.
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: "Too many requests. Try again later.", code: "RATE_LIMITED" } },
+});
+
+module.exports = { loginLimiter, twoFactorLimiter, kycSubmitLimiter, forgotPasswordLimiter };

@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const { loginLimiter, twoFactorLimiter } = require("../../../middleware/rateLimit");
+const { loginLimiter, twoFactorLimiter, forgotPasswordLimiter } = require("../../../middleware/rateLimit");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { generateSecret, generate, verify, generateURI } = require("otplib");
@@ -11,12 +11,19 @@ const prisma = require("../../../lib/prisma");
 const { AppError } = require("../../../middleware/error");
 const { authenticate } = require("../../../middleware/auth");
 const { sendWelcome, sendVerificationEmail, sendNewDeviceAlert } = require("../../../services/lifecycle.service");
+const { notify } = require("../../../notifications/router");
 const logger = require("../../../lib/logger");
 
 const EMAIL_VERIFICATION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24h
+const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000; // 1h
+const APP_URL = `https://${process.env.DOMAIN || "quantedge.exchange"}`;
 
 function generateVerificationToken() {
   return crypto.randomBytes(32).toString("hex");
+}
+
+function hashResetToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 const TWO_FA_PENDING_EXPIRY = "5m";
@@ -461,6 +468,74 @@ router.post("/resend-verification", authenticate, async (req, res, next) => {
     await sendVerificationEmail(user.id, verificationToken);
 
     res.json({ success: true, data: { sent: true } });
+  } catch (err) { next(err); }
+});
+
+// POST /auth/forgot-password — always returns the same generic response,
+// whether or not the email is registered, so the endpoint can't be used to
+// enumerate accounts.
+router.post("/forgot-password", forgotPasswordLimiter, [
+  body("email").isEmail().normalizeEmail(),
+], async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) throw new AppError("Validation failed", 400, "VALIDATION_ERROR");
+
+    const { email } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = hashResetToken(rawToken);
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS);
+
+      await prisma.passwordResetToken.create({
+        data: { userId: user.id, tokenHash, expiresAt },
+      });
+
+      const ownerMembership = await prisma.membership.findFirst({
+        where: { userId: user.id, status: "ACTIVE" },
+      });
+
+      if (ownerMembership) {
+        const resetUrl = `${APP_URL}/reset-password?token=${rawToken}`;
+        await notify(user.id, ownerMembership.workspaceId, "PASSWORD_RESET_REQUESTED", { resetUrl });
+      }
+    }
+
+    res.json({ success: true, data: { message: "If that email is registered, a reset link has been sent." } });
+  } catch (err) { next(err); }
+});
+
+// POST /auth/reset-password
+router.post("/reset-password", [
+  body("token").isString().isLength({ min: 1 }),
+  body("newPassword").isLength({ min: 8 }),
+], async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) throw new AppError("Validation failed", 400, "VALIDATION_ERROR");
+
+    const { token, newPassword } = req.body;
+    const tokenHash = hashResetToken(token);
+
+    const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+      throw new AppError("Invalid or expired reset link", 400, "INVALID_TOKEN");
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
+      prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
+      // Invalidate every existing session — a reset means any previously
+      // issued refresh token (e.g. one an attacker who prompted this reset
+      // already holds) must stop working.
+      prisma.refreshToken.deleteMany({ where: { userId: resetToken.userId } }),
+    ]);
+
+    res.json({ success: true, data: { reset: true } });
   } catch (err) { next(err); }
 });
 

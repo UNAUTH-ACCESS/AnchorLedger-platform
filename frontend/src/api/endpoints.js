@@ -8,6 +8,8 @@ export const auth = {
     client.post("/auth/register", { email, password, name, workspaceName }),
   verifyEmail: (token) => client.post("/auth/verify-email", { token }),
   resendVerification: () => client.post("/auth/resend-verification"),
+  forgotPassword: (email) => client.post("/auth/forgot-password", { email }),
+  resetPassword: (token, newPassword) => client.post("/auth/reset-password", { token, newPassword }),
   verify2FALogin: (pendingToken, code, deviceId) => client.post("/auth/2fa/verify-login", { pendingToken, code, deviceId }),
   setup2FA: () => client.post("/auth/2fa/setup"),
   enable2FA: (code) => client.post("/auth/2fa/enable", { code }),
