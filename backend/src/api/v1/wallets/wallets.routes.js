@@ -1,8 +1,9 @@
 const express = require("express");
 const prisma = require("../../../lib/prisma");
-const { authenticate, requireWorkspace } = require("../../../middleware/auth");
+const { authenticate, requireWorkspace, requirePlatformAdmin, requirePlatformPermission } = require("../../../middleware/auth");
 const { assertWalletAccess } = require("../../../middleware/ownership");
 const { AppError } = require("../../../middleware/error");
+const logger = require("../../../lib/logger");
 
 const router = express.Router();
 
@@ -160,6 +161,23 @@ router.post("/:id/link-confirm", authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /wallets/submit-signed-transaction
+// Body: { transaction: base64 signed tx } — from the Phantom deep-link
+// signTransaction flow. signAndSendTransaction (deep link) is deprecated by
+// Phantom; signTransaction only signs, so this explicit submit step is what
+// replaces the broadcast half of the old window.solana call. Not wallet-
+// scoped (no :id) since at this point we just have signed bytes, not
+// necessarily a resolved wallet row yet — link-confirm/unlink-confirm do
+// their own on-chain verification independent of this call succeeding.
+router.post("/submit-signed-transaction", authenticate, async (req, res, next) => {
+  try {
+    const { transaction } = req.body;
+    if (!transaction) throw new AppError("transaction (base64) is required", 400, "VALIDATION_ERROR");
+    const result = await delegatePost("/submit-signed-transaction", { transaction });
+    res.json({ success: true, data: { signature: result.signature } });
+  } catch (err) { next(err); }
+});
+
 // POST /wallets/:id/unlink-payload
 router.post("/:id/unlink-payload", authenticate, async (req, res, next) => {
   try {
@@ -173,9 +191,50 @@ router.post("/:id/unlink-payload", authenticate, async (req, res, next) => {
 });
 
 // POST /wallets/:id/unlink-confirm
+// Body: { signature? } — the on-chain tx signature from chain.sendApproval(),
+// if the client has one (it's persisted client-side and replayed here on
+// retry after an interrupted flow — see WalletConnect.jsx's resume logic).
+//
+// This used to flip delegateApproved:false purely on the client's say-so,
+// with no on-chain check. That's unsafe for a retry/resume path: a stale
+// signature from a transaction that never actually landed (blockhash
+// expired, user's approval interrupted, etc.) would incorrectly mark the
+// wallet as unlinked while the delegate is still fully live on-chain —
+// confirmed via a live devnet check during investigation of this exact bug
+// that a reload-interrupted unlink leaves the on-chain delegate untouched.
+// So: verify against delegate-server's /status (same allowance check used
+// to confirm a LINK) before trusting the DB write, for every unlink-confirm
+// call, not just retries.
 router.post("/:id/unlink-confirm", authenticate, async (req, res, next) => {
   try {
-    await assertWalletAccess(req.params.id, req.user.id);
+    const wallet = await assertWalletAccess(req.params.id, req.user.id);
+    const { signature } = req.body || {};
+
+    if (!wallet.delegateChain) {
+      // Nothing to verify — already unlinked (or never was). Idempotent no-op.
+      return res.json({ success: true, data: { alreadyUnlinked: true } });
+    }
+
+    const statusData = await delegatePost("/status", {
+      chains: [wallet.delegateChain],
+      addresses: { [wallet.delegateChain]: wallet.address },
+    });
+    const allowance = parseFloat(statusData.statuses?.[0]?.allowance || "0");
+
+    if (allowance > 0) {
+      logger.warn("[wallets] unlink-confirm called but delegate still active on-chain", {
+        walletId: wallet.id, address: wallet.address, chain: wallet.delegateChain, allowance, signature,
+      });
+      throw new AppError(
+        "Revoke transaction has not confirmed on-chain yet — the delegate is still active. Try again in a moment.",
+        409,
+        "NOT_YET_REVOKED"
+      );
+    }
+
+    logger.info("[wallets] Unlink confirmed — verified on-chain", {
+      walletId: wallet.id, address: wallet.address, chain: wallet.delegateChain, signature,
+    });
 
     await prisma.wallet.update({
       where: { id: req.params.id },
@@ -185,10 +244,38 @@ router.post("/:id/unlink-confirm", authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /wallets/unlink-interrupted-beacon — diagnostic only, no auth (fired
+// via navigator.sendBeacon on pagehide/beforeunload, which can't set an
+// Authorization header). Never writes anything; just makes an interrupted
+// unlink flow directly visible in logs instead of needing a live coordinated
+// repro to catch it, the way this exact bug had to be diagnosed once already.
+router.post("/unlink-interrupted-beacon", (req, res) => {
+  const { walletId, stage } = req.body || {};
+  logger.warn("[wallets] Unlink flow interrupted by page unload", {
+    walletId, stage, ip: req.ip, ua: req.headers["user-agent"],
+  });
+  res.status(204).end();
+});
+
 // GET /wallets/delegate-status
 router.get("/delegate-status", authenticate, requireWorkspace, async (req, res, next) => {
   try {
     const wallets = await prisma.wallet.findMany({ where: { workspaceId: req.workspace.id, delegateApproved: true } });
     res.json({ success: true, data: wallets });
+  } catch (err) { next(err); }
+});
+
+// ---------- ADMIN ROUTES ----------
+
+// GET /wallets/admin/all — every wallet across every workspace, so
+// delegate/allowance issues are visible platform-wide instead of one
+// account at a time.
+router.get("/admin/all", authenticate, requirePlatformAdmin, requirePlatformPermission("view_all"), async (req, res, next) => {
+  try {
+    const wallets = await prisma.wallet.findMany({
+      include: { chain: true, workspace: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ success: true, data: { wallets } });
   } catch (err) { next(err); }
 });

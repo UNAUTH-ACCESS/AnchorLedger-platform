@@ -25,6 +25,10 @@ import PnLDashboard  from "./pages/pnl/PnLDashboard";
 import SubscribePage   from "./pages/subscribe/SubscribePage";
 import OnboardingPage from "./pages/onboarding/OnboardingPage";
 import AdminKycQueue from "./pages/admin/AdminKycQueue";
+import AdminOperations from "./pages/admin/AdminOperations";
+import WalletCallback from "./pages/wallets/WalletCallback";
+import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
 import KycSubmission from "./pages/kyc/KycSubmission";
 
 function AuthenticatedApp() {
@@ -54,8 +58,10 @@ function AuthenticatedApp() {
         <Route path="/audit"      element={<AuditLog/>}  />
         <Route path="/settings"   element={<Settings/>}  />
         <Route path="/wallets"   element={<WalletConnect/>} />
+        <Route path="/wallet-callback" element={<WalletCallback/>} />
         <Route path="/pnl"      element={<PnLDashboard/>} />
         <Route path="/admin/kyc"  element={<AdminKycQueue/>} />
+        <Route path="/admin/ops"  element={<AdminOperations/>} />
         <Route path="/kyc"        element={<KycSubmission/>} />
         <Route path="*"           element={<Navigate to="/dashboard" replace />} />
       </Routes>
@@ -78,6 +84,8 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage/>} />
       <Route path="/reset-password" element={<ResetPasswordPage/>} />
       <Route path="/subscribe" element={<SubscribePage/>} />
+      <Route path="/terms" element={<Terms/>} />
+      <Route path="/privacy" element={<Privacy/>} />
       <Route path="/onboarding" element={<RouteGuard onboardingExempt><OnboardingPage/></RouteGuard>} />
       <Route path="/unsubscribe" element={<SubscribePage/>} />
       <Route path="/*" element={

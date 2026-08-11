@@ -1,10 +1,39 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Transaction } from "@solana/web3.js";
+import { TronLinkAdapter } from "@tronweb3/tronwallet-adapter-tronlink";
+import { TronWeb } from "tronweb";
 import { colors } from "../../lib/tokens";
 import client from "../../api/client";
 import useAuthStore from "../../store/auth.store";
+import {
+  getSession as getPhantomSession,
+  setFlow as setPhantomFlow,
+  buildConnectUrl as buildPhantomConnectUrl,
+  beginSigning as beginPhantomSigning,
+} from "../../lib/phantomDeeplink";
+
+function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 
 // ── Chain config ──────────────────────────────────────────────────────────────
+
+// TronLinkAdapter handles both desktop (window.tronWeb extension) and
+// mobile (opens the TronLink app via its own deep-link protocol,
+// openAppWithDeeplink defaults to true) — matching TronLink's own
+// recommended integration rather than hand-rolling their raw
+// tronlinkoutside:// protocol. Singleton: connect() state needs to persist
+// between getAddress() and sendApproval() within one flow.
+const tronLinkAdapter = new TronLinkAdapter({
+  dappName: "QuantEdge",
+  dappIcon: `${window.location.origin}/icon-192.png`,
+});
+
+// signTransaction() only signs, doesn't broadcast (same shape as Phantom's
+// deep-link signTransaction) — this plain, keyless TronWeb instance is
+// only used to build the unsigned tx and submit the signed one; neither
+// operation needs a wallet.
+const tronWebReadOnly = new TronWeb({ fullHost: "https://nile.trongrid.io" });
 
 const CHAINS = [
   {
@@ -40,21 +69,30 @@ const CHAINS = [
     provider: "TRONLINK",
     icon:     "◈",
     color:    "#FF060A",
-    detect:   () => typeof window.tronWeb !== "undefined" && window.tronWeb.ready,
+    detect:   () => true, // detection + mobile deep-link handled inside connect() by
+                           // TronLinkAdapter itself — matches the SPL pattern, no
+                           // synchronous pre-check that would false-negative on mobile
+                           // before the adapter gets a chance to open the app.
     getAddress: async () => {
-      return window.tronWeb.defaultAddress.base58;
+      await tronLinkAdapter.connect();
+      return tronLinkAdapter.address;
     },
-    switchChain: async () => {}, // TronLink handles network internally
+    switchChain: async () => {}, // TronLink handles network internally — switchChain() itself
+                                  // isn't supported by every TronLink app version (confirmed via
+                                  // live test: "Current version of TronLink doesn't support switch
+                                  // chain operation"), so this stays a no-op rather than a hard
+                                  // dependency on an RPC method that isn't universally available.
     sendApproval: async (payload) => {
-      const tx = await window.tronWeb.transactionBuilder.triggerSmartContract(
+      tronWebReadOnly.setAddress(tronLinkAdapter.address);
+      const tx = await tronWebReadOnly.transactionBuilder.triggerSmartContract(
         payload.contractAddress,
         payload.functionSelector,
         { feeLimit: 100_000_000 },
         payload.parameters,
-        window.tronWeb.defaultAddress.hex
+        tronLinkAdapter.address
       );
-      const signed = await window.tronWeb.trx.sign(tx.transaction);
-      const result = await window.tronWeb.trx.sendRawTransaction(signed);
+      const signed = await tronLinkAdapter.signTransaction(tx.transaction);
+      const result = await tronWebReadOnly.trx.sendRawTransaction(signed);
       return result.txid;
     }
   },
@@ -95,6 +133,37 @@ const CHAINS = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Persists across an interrupted unlink flow — e.g. Android reclaiming a
+// backgrounded WebView during Phantom's approval overlay, which silently
+// reloads the page and abandons the in-flight handleUnlink() promise chain
+// before it ever reaches unlink-confirm. Keyed per chain since only one
+// unlink can realistically be in flight per chain at a time. Server-side,
+// unlink-confirm independently verifies the delegate is actually gone
+// on-chain before trusting any signature passed here — so a stale/replayed
+// entry can't incorrectly mark a wallet unlinked that's still delegated.
+const pendingUnlinkKey = (chainKey) => `qe_pending_unlink_${chainKey}`;
+
+function getPendingUnlink(chainKey) {
+  try {
+    const raw = localStorage.getItem(pendingUnlinkKey(chainKey));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setPendingUnlink(chainKey, data) {
+  try {
+    localStorage.setItem(pendingUnlinkKey(chainKey), JSON.stringify(data));
+  } catch { /* localStorage unavailable — resume just won't be possible */ }
+}
+
+function clearPendingUnlink(chainKey) {
+  try {
+    localStorage.removeItem(pendingUnlinkKey(chainKey));
+  } catch { /* ignore */ }
+}
 
 const STATUSES = {
   idle:        { label: "Not connected",   color: colors.muted  },
@@ -140,6 +209,26 @@ function WalletCard({ chain, workspaceId, onLinked, onUnlinked, approvedWallet }
   async function handleConnect() {
     setError(null);
     try {
+      // Mobile SPL uses Phantom's deep-link protocol instead of
+      // window.solana — even inside Phantom's own in-app browser, Android
+      // can reclaim the backgrounded WebView during the native-approval
+      // handoff and silently abandon window.solana.signAndSendTransaction()
+      // mid-flight. The deep-link flow survives that because state
+      // round-trips through URLs/localStorage, not an in-memory Promise.
+      // Desktop (browser extension, no app-switch) is unaffected and keeps
+      // window.solana unchanged.
+      if (chain.key === "SPL" && isMobileDevice()) {
+        setStatus("connecting");
+        const session = getPhantomSession();
+        if (session) {
+          await beginPhantomSigning({ action: "link", chainKey: "SPL", walletId: null, capUSDT: 10000 });
+        } else {
+          setPhantomFlow({ action: "link", chainKey: "SPL", walletId: null, capUSDT: 10000, stage: "connecting" });
+          window.location.href = buildPhantomConnectUrl();
+        }
+        return; // navigates away either way — nothing after this runs
+      }
+
       // 1. Detect wallet
       setStatus("detecting");
       if (!chain.detect()) {
@@ -216,6 +305,28 @@ function WalletCard({ chain, workspaceId, onLinked, onUnlinked, approvedWallet }
     setStatus("connecting");
     setError(null);
     try {
+      // Same deep-link rationale as handleConnect above — this is in fact
+      // the exact flow the original bug was diagnosed on.
+      if (chain.key === "SPL" && isMobileDevice()) {
+        const walletsRes = await client.get("/wallets");
+        const wallet = walletsRes.data.data?.find(w => w.address.toLowerCase() === address?.toLowerCase());
+        if (!wallet) throw new Error("Wallet not found");
+
+        const session = getPhantomSession();
+        if (session) {
+          await beginPhantomSigning({ action: "unlink", chainKey: "SPL", walletId: wallet.id });
+        } else {
+          setPhantomFlow({ action: "unlink", chainKey: "SPL", walletId: wallet.id, stage: "connecting" });
+          window.location.href = buildPhantomConnectUrl();
+        }
+        return;
+      }
+    } catch (e) {
+      setError(e.message);
+      setStatus("error");
+      return;
+    }
+    try {
       // Ensure the wallet provider is actually available before attempting
       // to sign - handleUnlink calls sendApproval directly (it never goes
       // through getAddress() the way handleConnect does), so without this
@@ -236,18 +347,88 @@ function WalletCard({ chain, workspaceId, onLinked, onUnlinked, approvedWallet }
 
       const payloadRes = await client.post(`/wallets/${wallet.id}/unlink-payload`);
       const payload = payloadRes.data.data.payload;
-      await chain.sendApproval(payload);
-      await client.post(`/wallets/${wallet.id}/unlink-confirm`);
+
+      // Mark the flow as in-progress before handing off to the wallet app —
+      // this is the window (Phantom's approval overlay) where an Android
+      // WebView reclaim can silently kill the page and abandon everything
+      // below this line.
+      setPendingUnlink(chain.key, { walletId: wallet.id, stage: "signing", signature: null, startedAt: Date.now() });
+
+      const signature = await chain.sendApproval(payload);
+      setTxHash(signature);
+
+      // Persist the signature the moment we have it, before the network
+      // call that could itself get interrupted — this is what makes resume
+      // possible without re-prompting Phantom.
+      setPendingUnlink(chain.key, { walletId: wallet.id, stage: "signed", signature, startedAt: Date.now() });
+
+      await client.post(`/wallets/${wallet.id}/unlink-confirm`, { signature });
+      clearPendingUnlink(chain.key);
 
       setStatus("idle");
       setAddress(null);
       setTxHash(null);
       onUnlinked?.(chain.key);
     } catch (e) {
+      // Deliberately not clearing pendingUnlink here — if we have a
+      // signature, it's still worth resuming on next mount rather than
+      // losing it.
       setError(e.message);
       setStatus("error");
     }
   }
+
+  // Resume-on-mount: if a previous unlink flow got a signature but never
+  // reached unlink-confirm (interrupted reload), retry the confirm call
+  // with it instead of forcing the user back through Phantom. Runs once;
+  // server-side verification means a stale/never-landed signature just
+  // fails safely rather than being trusted blindly.
+  const resumeAttempted = useRef(false);
+  useEffect(() => {
+    if (resumeAttempted.current) return;
+    if (!approvedWallet) return; // server truth says already unlinked — nothing to resume
+    const pending = getPendingUnlink(chain.key);
+    if (!pending || pending.stage !== "signed" || !pending.signature) return;
+    if (pending.walletId !== approvedWallet.id) return;
+
+    resumeAttempted.current = true;
+    (async () => {
+      try {
+        await client.post(`/wallets/${pending.walletId}/unlink-confirm`, { signature: pending.signature });
+        clearPendingUnlink(chain.key);
+        setStatus("idle");
+        setAddress(null);
+        setTxHash(null);
+        onUnlinked?.(chain.key);
+      } catch (e) {
+        // NOT_YET_REVOKED (or any other failure) — leave the pending entry
+        // in place, it may resolve on a future mount. Don't surface an
+        // error for a resume attempt the user didn't knowingly trigger.
+      }
+    })();
+  }, [approvedWallet]);
+
+  // Diagnostic beacon — if the page is being hidden/unloaded while an
+  // unlink is mid-flight, log it server-side immediately. This is what
+  // makes this exact failure mode visible on its own next time, instead of
+  // needing a live coordinated repro to catch it in the act.
+  useEffect(() => {
+    const sendInterruptBeacon = () => {
+      const pending = getPendingUnlink(chain.key);
+      if (!pending) return;
+      const payload = new Blob(
+        [JSON.stringify({ walletId: pending.walletId, stage: pending.stage })],
+        { type: "application/json" }
+      );
+      navigator.sendBeacon?.("/api/v1/wallets/unlink-interrupted-beacon", payload);
+    };
+    window.addEventListener("pagehide", sendInterruptBeacon);
+    window.addEventListener("beforeunload", sendInterruptBeacon);
+    return () => {
+      window.removeEventListener("pagehide", sendInterruptBeacon);
+      window.removeEventListener("beforeunload", sendInterruptBeacon);
+    };
+  }, [chain.key]);
 
   return (
     <div style={{

@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../../../lib/prisma");
-const { authenticate, requireWorkspace } = require("../../../middleware/auth");
+const { authenticate, requireWorkspace, requirePlatformAdmin, requirePlatformPermission } = require("../../../middleware/auth");
 const { assertPositionAccess } = require("../../../middleware/ownership");
 const { AppError } = require("../../../middleware/error");
 
@@ -60,6 +60,36 @@ router.get("/:id", authenticate, async (req, res, next) => {
       include: { asset: true, venue: true, chain: true, fill: { include: { venue: true } }, portfolio: true },
     });
     res.json({ success: true, data: position });
+  } catch (err) { next(err); }
+});
+
+// ---------- ADMIN ROUTES ----------
+
+// Same threshold settlementReconciliation.job.js uses to treat a
+// SETTLEMENT_PENDING position as orphaned rather than still in-flight.
+const ORPHAN_THRESHOLD_MS = 2 * 60 * 1000;
+
+// GET /positions/admin/settlement-issues — platform-wide version of
+// /settlement-issues above (that one is scoped to req.workspace.id).
+router.get("/admin/settlement-issues", authenticate, requirePlatformAdmin, requirePlatformPermission("view_all"), async (req, res, next) => {
+  try {
+    const orphanCutoff = new Date(Date.now() - ORPHAN_THRESHOLD_MS);
+
+    const positions = await prisma.position.findMany({
+      where: {
+        OR: [
+          { settlementStatus: "SETTLEMENT_FAILED" },
+          { settlementStatus: "SETTLEMENT_PENDING", lastSettlementAt: { lt: orphanCutoff } },
+        ],
+      },
+      include: {
+        asset: true, venue: true, chain: true,
+        portfolio: { select: { id: true, name: true, workspaceId: true, workspace: { select: { name: true } } } },
+      },
+      orderBy: { lastSettlementAt: "asc" },
+    });
+
+    res.json({ success: true, data: { positions } });
   } catch (err) { next(err); }
 });
 

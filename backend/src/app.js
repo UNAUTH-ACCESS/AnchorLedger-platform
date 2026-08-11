@@ -43,6 +43,8 @@ const reportRoutes          = require("./api/v1/reports/reports.routes");
 const marketingRoutes       = require("./api/v1/marketing/marketing.routes");
 const onboardingRoutes     = require("./api/v1/onboarding/onboarding.routes");
 const kycRoutes             = require("./api/v1/kyc/kyc.routes");
+const adminSystemRoutes     = require("./api/v1/admin/system.routes");
+const adminClientsRoutes    = require("./api/v1/admin/clients.routes");
 const { runWeeklySummaries } = require("./services/lifecycle.service");
 
 const app = express();
@@ -88,6 +90,8 @@ app.use("/api/v1/marketing",     marketingRoutes);
 app.use("/api/v1/onboarding",    onboardingRoutes);
 app.use("/api/v1/chains",        require("./api/v1/chains/chains.routes"));
 app.use("/api/v1/kyc",          kycRoutes);
+app.use("/api/v1/admin",        adminSystemRoutes);
+app.use("/api/v1/admin",        adminClientsRoutes);
 app.use("/unsubscribe",          marketingRoutes);
 
 // ── Error handling ────────────────────────────────────────────────────────────

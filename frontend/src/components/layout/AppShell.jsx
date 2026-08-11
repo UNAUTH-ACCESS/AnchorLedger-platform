@@ -21,6 +21,7 @@ const NAV = [
 
 const ADMIN_NAV = [
   { to: "/admin/kyc",  label: "KYC Review",  icon: "☑" },
+  { to: "/admin/ops",  label: "Operations",  icon: "⌁" },
 ];
 
 function RegimeOrb({ regime }) {
@@ -161,6 +162,14 @@ function Sidebar({ onNav }) {
               {activeWorkspace?.role || "—"}
             </div>
           </div>
+        </div>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: colors.muted,
+          display: "flex", gap: 8,
+        }}>
+          <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Terms</a>
+          <span>·</span>
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Privacy</a>
         </div>
       </div>
     </aside>

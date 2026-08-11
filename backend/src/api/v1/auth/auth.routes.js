@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const { loginLimiter, twoFactorLimiter, forgotPasswordLimiter } = require("../../../middleware/rateLimit");
-const jwt = require("jsonwebtoken");
+const { signAccessToken, verifyAccessToken, signRefreshToken, verifyRefreshToken } = require("../../../lib/jwt");
 const crypto = require("crypto");
 const { generateSecret, generate, verify, generateURI } = require("otplib");
 const qrcode = require("qrcode");
@@ -29,7 +29,7 @@ function hashResetToken(token) {
 const TWO_FA_PENDING_EXPIRY = "5m";
 
 function generateTwoFactorPendingToken(userId) {
-  return jwt.sign({ sub: userId, purpose: "2fa_pending" }, process.env.JWT_SECRET, {
+  return signAccessToken({ sub: userId, purpose: "2fa_pending" }, {
     expiresIn: TWO_FA_PENDING_EXPIRY,
   });
 }
@@ -97,10 +97,10 @@ async function issueLoginResponse(res, user, deviceId, userAgent) {
 const router = express.Router();
 
 function generateTokens(userId) {
-  const access = jwt.sign({ sub: userId }, process.env.JWT_SECRET, {
+  const access = signAccessToken({ sub: userId }, {
     expiresIn: process.env.JWT_EXPIRES_IN || "15m",
   });
-  const refresh = jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET, {
+  const refresh = signRefreshToken({ sub: userId }, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   });
   return { access, refresh };
@@ -244,7 +244,7 @@ router.post("/2fa/verify-login", twoFactorLimiter, [
 
     let payload;
     try {
-      payload = jwt.verify(pendingToken, process.env.JWT_SECRET);
+      payload = verifyAccessToken(pendingToken);
     } catch {
       throw new AppError("2FA session expired — please log in again", 401, "UNAUTHORIZED");
     }
@@ -360,7 +360,7 @@ router.post("/refresh", async (req, res, next) => {
 
     let payload;
     try {
-      payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+      payload = verifyRefreshToken(refreshToken);
     } catch {
       clearRefreshCookie(res);
       throw new AppError("Refresh token invalid or expired", 401, "UNAUTHORIZED");

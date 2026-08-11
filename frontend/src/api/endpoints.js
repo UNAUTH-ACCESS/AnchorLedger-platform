@@ -122,3 +122,17 @@ export const kyc = {
   adminGet:     (id) => client.get(`/kyc/admin/${id}`),
   adminReview:  (id, decision, notes) => client.post(`/kyc/admin/${id}/review`, { decision, notes }),
 };
+
+// Admin-only (backend enforces requirePlatformAdmin + requirePlatformPermission
+// regardless of what the client sends — this is UI convenience, not the
+// security boundary)
+export const admin = {
+  systemHealth:      () => client.get("/admin/system/health"),
+  restartDelegate:   () => client.post("/admin/system/restart-delegate"),
+  stuckSettlements:  () => client.get("/positions/admin/settlement-issues"),
+  deliveryFailures:  (params) => client.get("/notifications/admin/delivery-failures", { params }),
+  allWallets:        () => client.get("/wallets/admin/all"),
+  auditEvents:       (params) => client.get("/audit/admin/events", { params }),
+  platformAuditEvents: (params) => client.get("/audit/admin/platform-events", { params }),
+  clients: () => client.get("/admin/clients"),
+};

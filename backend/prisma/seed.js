@@ -49,6 +49,18 @@ async function main() {
     },
   });
 
+  const tronChain = await prisma.chain.upsert({
+    where: { name: "Tron" },
+    update: {},
+    create: {
+      name: "Tron",
+      type: "TRON",
+      networkId: "mainnet",
+      explorerUrl: "https://tronscan.org",
+      nativeSymbol: "TRX",
+    },
+  });
+
   // ── Venues ────────────────────────────────────────────────────────────────
   const drift = await prisma.venue.upsert({
     where: { name: "Drift" },
@@ -72,6 +84,17 @@ async function main() {
     where: { name: "1inch" },
     update: {},
     create: { name: "1inch", chainId: evmChain.id, type: "AGGREGATOR", feeBps: 1, makerRebateBps: 0 },
+  });
+
+  // Primary trading venue — all assets settle here in USDT-equivalent value
+  // via TronDelegateExecutor's direct custody transfer. Not a real DEX
+  // integration (trading is currently simulated platform-wide, see ToS
+  // Section 2/5); this is a placeholder venue row sufficient for the fields
+  // actually read downstream (name, chainId, feeBps, active).
+  const tronDirect = await prisma.venue.upsert({
+    where: { name: "Tron Direct" },
+    update: {},
+    create: { name: "Tron Direct", chainId: tronChain.id, type: "SPOT", feeBps: 2.5, makerRebateBps: 0 },
   });
 
   // ── Assets ────────────────────────────────────────────────────────────────
@@ -347,7 +370,7 @@ async function main() {
 
   console.log("✓ Roles seeded");
   console.log("✓ Chains seeded:", solanaChain.name, evmChain.name);
-  console.log("✓ Venues seeded:", [drift, jupiter, hyperliquid, oneInch].map(v => v.name).join(", "));
+  console.log("✓ Venues seeded:", [drift, jupiter, hyperliquid, oneInch, tronDirect].map(v => v.name).join(", "));
   console.log("✓ Assets seeded:", [sol, btc, eth].map(a => a.symbol).join(", "));
   console.log("✓ Platform admin:", adminUser.email);
   console.log("✓ Workspace:", workspace.slug);

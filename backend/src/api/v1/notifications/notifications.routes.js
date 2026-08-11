@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma   = require("../../../lib/prisma");
-const { authenticate, requirePermission, requireWorkspace } = require("../../../middleware/auth");
+const { authenticate, requirePermission, requireWorkspace, requirePlatformAdmin, requirePlatformPermission } = require("../../../middleware/auth");
 const { AppError }     = require("../../../middleware/error");
 const { getUserPreferences, setPreference } = require("../../../notifications/preferences");
 
@@ -106,6 +106,37 @@ router.get("/delivery-log/:id", authenticate, async (req, res, next) => {
     });
     if (!notification) throw new AppError("Notification not found", 404, "NOT_FOUND");
     res.json({ success: true, data: notification });
+  } catch (err) { next(err); }
+});
+
+// ---------- ADMIN ROUTES ----------
+
+// GET /notifications/admin/delivery-failures — recent FAILED deliveries
+// across all users, optionally filtered by channel (e.g. ?channel=EMAIL to
+// surface things like the Resend DNS issue without grepping logs).
+router.get("/admin/delivery-failures", authenticate, requirePlatformAdmin, requirePlatformPermission("view_all"), async (req, res, next) => {
+  try {
+    const { channel, limit = 100 } = req.query;
+
+    const deliveries = await prisma.notificationDelivery.findMany({
+      where: {
+        status: "FAILED",
+        ...(channel ? { channel } : {}),
+      },
+      include: {
+        notification: {
+          select: {
+            id: true, type: true, title: true, userId: true, workspaceId: true,
+            user: { select: { email: true } },
+            workspace: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: parseInt(limit),
+    });
+
+    res.json({ success: true, data: { deliveries } });
   } catch (err) { next(err); }
 });
 

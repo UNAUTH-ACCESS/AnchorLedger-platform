@@ -67,6 +67,10 @@ reportAndExitIfErrors();
 function assertApiConfig() {
   config.JWT_SECRET = requireVar("JWT_SECRET", { minLength: 16 });
   config.JWT_REFRESH_SECRET = requireVar("JWT_REFRESH_SECRET", { minLength: 16 });
+  // Only set during a rotation window — see docs/JWT_ROTATION.md. Absent
+  // the rest of the time, which is why these aren't requireVar().
+  config.JWT_SECRET_PREVIOUS = optionalVar("JWT_SECRET_PREVIOUS", null);
+  config.JWT_REFRESH_SECRET_PREVIOUS = optionalVar("JWT_REFRESH_SECRET_PREVIOUS", null);
   config.CORS_ORIGIN = requireVar("CORS_ORIGIN");
   reportAndExitIfErrors();
   return config;

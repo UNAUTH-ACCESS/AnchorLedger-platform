@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../../../lib/prisma");
-const { authenticate, requireWorkspace } = require("../../../middleware/auth");
+const { authenticate, requireWorkspace, requirePlatformAdmin, requirePlatformPermission } = require("../../../middleware/auth");
 const { AppError } = require("../../../middleware/error");
 
 const router = express.Router();
@@ -56,6 +56,62 @@ router.patch("/notifications/:id/read", authenticate, async (req, res, next) => 
     }
     await prisma.notification.update({ where: { id: req.params.id }, data: { read: true } });
     res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// ---------- ADMIN ROUTES ----------
+
+// GET /audit/admin/events — platform-wide version of GET / above (that one
+// is scoped to req.workspace.id). Same filters, plus workspaceId/actorId.
+router.get("/admin/events", authenticate, requirePlatformAdmin, requirePlatformPermission("view_all"), async (req, res, next) => {
+  try {
+    const { entity, from, to, workspaceId, actorId, limit = 100, offset = 0 } = req.query;
+
+    const where = {
+      ...(entity      ? { entityType: entity }   : {}),
+      ...(workspaceId ? { workspaceId }          : {}),
+      ...(actorId     ? { actorId }              : {}),
+      ...(from || to ? { ts: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}),
+    };
+
+    const [events, total] = await Promise.all([
+      prisma.auditEvent.findMany({
+        where,
+        include: {
+          actor: { select: { id: true, name: true, email: true } },
+          workspace: { select: { id: true, name: true } },
+        },
+        orderBy: { ts: "desc" },
+        take: parseInt(limit),
+        skip: parseInt(offset),
+      }),
+      prisma.auditEvent.count({ where }),
+    ]);
+
+    res.json({ success: true, data: { events, total } });
+  } catch (err) { next(err); }
+});
+
+// GET /audit/admin/platform-events — PlatformAuditEvent log: actions taken
+// from this admin panel itself (e.g. restart-delegate-server), which have
+// no workspace to attach to.
+router.get("/admin/platform-events", authenticate, requirePlatformAdmin, requirePlatformPermission("view_all"), async (req, res, next) => {
+  try {
+    const { actorUserId, limit = 100, offset = 0 } = req.query;
+
+    const where = { ...(actorUserId ? { actorUserId } : {}) };
+
+    const [events, total] = await Promise.all([
+      prisma.platformAuditEvent.findMany({
+        where,
+        orderBy: { ts: "desc" },
+        take: parseInt(limit),
+        skip: parseInt(offset),
+      }),
+      prisma.platformAuditEvent.count({ where }),
+    ]);
+
+    res.json({ success: true, data: { events, total } });
   } catch (err) { next(err); }
 });
 

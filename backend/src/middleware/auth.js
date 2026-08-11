@@ -1,6 +1,6 @@
-const jwt = require("jsonwebtoken");
 const prisma = require("../lib/prisma");
 const { AppError } = require("./error");
+const { verifyAccessToken } = require("../lib/jwt");
 
 // Verify JWT and attach user to request
 async function authenticate(req, res, next) {
@@ -11,7 +11,7 @@ async function authenticate(req, res, next) {
     }
 
     const token = header.split(" ")[1];
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = verifyAccessToken(token);
 
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
@@ -114,6 +114,19 @@ async function requirePlatformAdmin(req, res, next) {
   }
 }
 
+// Platform admin AND holding a specific permission string in
+// PlatformAdmin.permissions (e.g. "view_all", "manage_platform"). Requires
+// requirePlatformAdmin to have already run and set req.platformAdmin, same
+// two-middlewares-in-sequence pattern as requirePlatformAdmin itself.
+function requirePlatformPermission(permission) {
+  return (req, res, next) => {
+    if (!req.platformAdmin?.permissions?.includes(permission)) {
+      return next(new AppError("Insufficient platform permissions", 403, "FORBIDDEN"));
+    }
+    next();
+  };
+}
+
 // Blocks any fund-exposing action (wallet linking, trade signing) until a
 // human admin has approved the user's KYC submission. Does its own fetch
 // rather than widening authenticate()'s select, to avoid touching a shared
@@ -137,4 +150,4 @@ async function requireKycApproved(req, res, next) {
   }
 }
 
-module.exports = { authenticate, requireWorkspace, requirePermission, requirePlatformAdmin, requireKycApproved };
+module.exports = { authenticate, requireWorkspace, requirePermission, requirePlatformAdmin, requirePlatformPermission, requireKycApproved };

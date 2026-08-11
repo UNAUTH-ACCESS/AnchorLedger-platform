@@ -666,11 +666,11 @@ function Stage9({ onNext }) {
 const STAGES = [3, 4, 5, 6, 7, 8, 9];
 
 // ── Stage 10 — Final Legal Agreement (e-signature) ──────────────────────────
-// Note: the agreement text below is illustrative, not attorney-drafted —
-// replace with real Terms of Service / Risk Disclosure language reviewed by
-// counsel before onboarding real clients. The audit trail (typed name, IP,
-// timestamp, version) this stage records is real and independent of the
-// text itself.
+// The box below is a condensed summary, not the agreement itself — the
+// actual Terms of Service and Privacy Policy (frontend/src/pages/legal/)
+// are what's linked and what the checkbox refers to. The audit trail
+// (typed name, IP, timestamp, version) this stage records is independent
+// of either.
 const AGREEMENT_VERSION = "v1";
 
 function Stage10({ onNext }) {
@@ -707,10 +707,17 @@ function Stage10({ onNext }) {
         </p>
       </div>
 
+      <div style={{ fontSize: 11, color: colors.muted, marginTop: -4 }}>
+        Full documents:{" "}
+        <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: colors.green, textDecoration: "none" }}>Terms of Service</a>
+        {" "}·{" "}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: colors.green, textDecoration: "none" }}>Privacy Policy</a>
+      </div>
+
       <Checkbox
         checked={agreed}
         onChange={setAgreed}
-        label="I have read and agree to the Risk Disclosure and Trading Agreement above."
+        label="I have read and agree to the Terms of Service and Privacy Policy, and to the risk summary above."
       />
 
       <Field label="Type your full legal name to sign">

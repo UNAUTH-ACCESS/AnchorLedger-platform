@@ -111,11 +111,12 @@ async function evaluateSignal(signal) {
 }
 
 async function getBestVenue(signal, asset) {
-  // SOL asset → prefer Drift (PERP) or Jupiter (SPOT)
-  // EVM assets → prefer Hyperliquid (PERP) or 1inch (SPOT)
-  const preferredNames = asset?.symbol === "SOL" ? ["Drift", "Jupiter"] : ["Hyperliquid", "1inch"];
+  // Notional is always USDT-denominated regardless of which asset a signal
+  // is about (see execution.service.js — feeAsset is always "USDT"), so
+  // there's no per-asset venue to pick: every signal settles through the
+  // single Tron custody-transfer path.
   return prisma.venue.findFirst({
-    where: { name: { in: preferredNames }, active: true },
+    where: { chain: { name: "Tron" }, active: true },
     orderBy: { feeBps: "asc" },
   });
 }
