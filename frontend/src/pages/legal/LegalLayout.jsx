@@ -101,7 +101,7 @@ export function LegalLayout({ title, effectiveDate, operator, children }) {
             fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700,
             letterSpacing: "0.08em", color: colors.text,
           }}>
-            QuantEdge
+            Anchor Ledger
           </span>
         </a>
 
@@ -121,7 +121,7 @@ export function LegalLayout({ title, effectiveDate, operator, children }) {
           marginTop: 40, paddingTop: 20, borderTop: `1px solid ${colors.border}`,
           fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted,
         }}>
-          <a href="/" style={{ color: colors.green, textDecoration: "none" }}>← Back to QuantEdge</a>
+          <a href="/" style={{ color: colors.green, textDecoration: "none" }}>← Back to Anchor Ledger</a>
         </div>
       </div>
     </div>

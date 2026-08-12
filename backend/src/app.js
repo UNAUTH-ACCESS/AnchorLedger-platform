@@ -120,7 +120,7 @@ setInterval(async () => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  logger.info(`QuantEdge API running on port ${PORT}`);
+  logger.info(`Anchor Ledger API running on port ${PORT}`);
 });
 
 // Graceful shutdown

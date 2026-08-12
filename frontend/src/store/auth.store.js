@@ -3,7 +3,7 @@ import { auth as authApi } from "../api/endpoints";
 import { getOrCreateDeviceId } from "../lib/device";
 import { setAccessToken, clearAccessToken } from "../lib/tokenHolder";
 
-// Clears auth-specific keys only — qe_device_id must survive logout/invalid-
+// Clears auth-specific keys only — al_device_id must survive logout/invalid-
 // token cases, since it identifies the physical device across sessions,
 // not the current login (Stage 11 device tracking would otherwise treat
 // every post-logout login as a brand-new device, forever).
@@ -11,10 +11,10 @@ function clearAuthStorage() {
   // One-time cleanup of legacy localStorage tokens from before the httpOnly-
   // cookie migration - these keys are never written to anymore, but old
   // sessions in already-open browsers may still have them lying around.
-  localStorage.removeItem("qe_access_token");
-  localStorage.removeItem("qe_refresh_token");
-  localStorage.removeItem("qe_user_id");
-  localStorage.removeItem("qe_workspace_id");
+  localStorage.removeItem("al_access_token");
+  localStorage.removeItem("al_refresh_token");
+  localStorage.removeItem("al_user_id");
+  localStorage.removeItem("al_workspace_id");
   clearAccessToken();
 }
 
@@ -44,9 +44,9 @@ const useAuthStore = create((set, get) => ({
 
       const { data } = await authApi.me();
       const { user, workspaces } = data.data;
-      const storedWorkspaceId = localStorage.getItem("qe_workspace_id");
+      const storedWorkspaceId = localStorage.getItem("al_workspace_id");
       const active = workspaces.find(w => w.id === storedWorkspaceId) || workspaces[0] || null;
-      if (active) localStorage.setItem("qe_workspace_id", active.id);
+      if (active) localStorage.setItem("al_workspace_id", active.id);
       set({ user, workspaces, activeWorkspace: active, accessToken, status: "authenticated" });
     } catch {
       clearAuthStorage();
@@ -96,10 +96,10 @@ const useAuthStore = create((set, get) => ({
   // never sees at all.
   _applySession: (accessToken, user, workspaces) => {
     setAccessToken(accessToken);
-    localStorage.setItem("qe_user_id", user.id);
+    localStorage.setItem("al_user_id", user.id);
 
     const active = workspaces[0];
-    if (active) localStorage.setItem("qe_workspace_id", active.id);
+    if (active) localStorage.setItem("al_workspace_id", active.id);
 
     set({
       user,
@@ -146,7 +146,7 @@ const useAuthStore = create((set, get) => ({
   },
 
   setWorkspace: (workspace) => {
-    localStorage.setItem("qe_workspace_id", workspace.id);
+    localStorage.setItem("al_workspace_id", workspace.id);
     set({ activeWorkspace: workspace });
   },
 

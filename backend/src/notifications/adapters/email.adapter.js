@@ -9,8 +9,8 @@
 const logger = require("../../lib/logger");
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-const FROM_ADDRESS   = process.env.FROM_EMAIL || "QuantEdge <onboarding@resend.dev>";
-const APP_URL        = `https://${process.env.DOMAIN || "quantedge.exchange"}`;
+const FROM_ADDRESS   = process.env.FROM_EMAIL || "Anchor Ledger <onboarding@resend.dev>";
+const APP_URL        = `https://${process.env.DOMAIN || "anchorledger.exchange"}`;
 
 async function deliver(notification, userEmail) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -51,7 +51,7 @@ function buildEmail(notification) {
     LOW:      "ℹ️ LOW",
   }[notification.priority] || notification.priority;
 
-  const subject = `[QuantEdge ${priorityLabel}] ${notification.title}`;
+  const subject = `[Anchor Ledger ${priorityLabel}] ${notification.title}`;
 
   const deepLink = buildDeepLink(notification.entityType, notification.entityId);
 
@@ -63,7 +63,7 @@ function buildEmail(notification) {
   <div style="max-width:520px;margin:0 auto;">
 
     <div style="margin-bottom:24px;">
-      <span style="font-size:11px;color:#5A6478;letter-spacing:0.1em;text-transform:uppercase;">QuantEdge Alert</span>
+      <span style="font-size:11px;color:#5A6478;letter-spacing:0.1em;text-transform:uppercase;">Anchor Ledger Alert</span>
     </div>
 
     <div style="background:#111118;border:1px solid #1E1E2E;border-radius:6px;padding:20px;margin-bottom:16px;">
@@ -89,7 +89,7 @@ function buildEmail(notification) {
        style="display:inline-block;background:#00D4AA;color:#0A0A0F;padding:10px 20px;
               border-radius:4px;font-size:12px;font-weight:700;text-decoration:none;
               letter-spacing:0.04em;">
-      View in QuantEdge →
+      View in Anchor Ledger →
     </a>
     ` : ""}
 

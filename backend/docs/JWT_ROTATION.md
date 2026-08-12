@@ -50,7 +50,7 @@ at once, though the normal case is rotating both together.
 
 ## Verifying a rotation actually took
 
-- `docker logs quantedge_api --tail 20` after the restart — clean boot,
+- `docker logs anchorledger_api --tail 20` after the restart — clean boot,
   no config errors (`assertApiConfig()` fails fast at startup if a secret
   is malformed, so a bad rotation shows up immediately, not later).
 - Confirm a session that was active *before* the restart still works:

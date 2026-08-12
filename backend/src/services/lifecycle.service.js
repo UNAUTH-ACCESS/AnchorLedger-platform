@@ -28,7 +28,7 @@ async function sendVerificationEmail(userId, token) {
     if (!user) return;
 
     const verifyUrl = `${APP_URL}/verify-email?token=${token}`;
-    await send(user.email, "Verify your QuantEdge email", buildVerification(user, verifyUrl));
+    await send(user.email, "Verify your Anchor Ledger email", buildVerification(user, verifyUrl));
     logger.info("[lifecycle] Verification email sent", { userId, email: user.email });
   } catch (err) {
     logger.warn("[lifecycle] Verification email failed", { userId, error: err.message });
@@ -40,7 +40,7 @@ async function sendNewDeviceAlert(userId, userAgent) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
 
-    await send(user.email, "New sign-in to your QuantEdge account", buildNewDeviceAlert(user, userAgent));
+    await send(user.email, "New sign-in to your Anchor Ledger account", buildNewDeviceAlert(user, userAgent));
     logger.info("[lifecycle] New device alert sent", { userId });
   } catch (err) {
     logger.warn("[lifecycle] New device alert failed", { userId, error: err.message });
@@ -53,7 +53,7 @@ async function sendWelcome(userId, workspaceId) {
     const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
     if (!user || !workspace) return;
 
-    await send(user.email, `Welcome to QuantEdge, ${user.name}`, buildWelcome(user, workspace));
+    await send(user.email, `Welcome to Anchor Ledger, ${user.name}`, buildWelcome(user, workspace));
     logger.info("[lifecycle] Welcome email sent", { userId, email: user.email });
   } catch (err) {
     logger.warn("[lifecycle] Welcome email failed", { userId, error: err.message });
@@ -65,7 +65,7 @@ async function sendFirstTrade(userId, workspaceId, tradeData) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
 
-    await send(user.email, "Your first trade on QuantEdge", buildFirstTrade(user, tradeData));
+    await send(user.email, "Your first trade on Anchor Ledger", buildFirstTrade(user, tradeData));
     logger.info("[lifecycle] First trade email sent", { userId });
   } catch (err) {
     logger.warn("[lifecycle] First trade email failed", { userId, error: err.message });
@@ -93,7 +93,7 @@ async function sendWeeklySummary(userId, workspaceId, report) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
 
-    await send(user.email, `QuantEdge weekly summary — ${formatDate(new Date())}`, buildWeeklySummary(user, report));
+    await send(user.email, `Anchor Ledger weekly summary — ${formatDate(new Date())}`, buildWeeklySummary(user, report));
     logger.info("[lifecycle] Weekly summary sent", { userId });
   } catch (err) {
     logger.warn("[lifecycle] Weekly summary failed", { userId, error: err.message });
@@ -138,7 +138,7 @@ function buildVerification(user, verifyUrl) {
       Verify Email →
     </a>
     <p style="margin-top:24px;font-size:11px;color:#5A6478;">
-      If you didn't create a QuantEdge account, you can safely ignore this email.
+      If you didn't create a Anchor Ledger account, you can safely ignore this email.
     </p>
   `);
 }
@@ -149,7 +149,7 @@ function buildNewDeviceAlert(user, userAgent) {
       New sign-in detected
     </p>
     <p style="margin-bottom:16px;color:#9BA8B4;">
-      Your QuantEdge account was just accessed from a device we haven't seen before.
+      Your Anchor Ledger account was just accessed from a device we haven't seen before.
     </p>
     <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:6px;padding:16px;margin-bottom:20px;">
       ${tradeRow("Time", new Date().toUTCString())}
@@ -173,7 +173,7 @@ function buildWelcome(user, workspace) {
     </p>
     <p style="margin-bottom:16px;color:#9BA8B4;">
       Your workspace <strong style="color:#E8F4F8;">${workspace.name}</strong> is ready.
-      QuantEdge is now running systematic signal detection on live market data.
+      Anchor Ledger is now running systematic signal detection on live market data.
     </p>
     <p style="margin-bottom:16px;color:#9BA8B4;">
       Here's what happens next:
@@ -273,13 +273,13 @@ function layout(body) {
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;">
       <div style="width:18px;height:18px;background:#00D4AA;
                   clip-path:polygon(50% 0%,100% 100%,0% 100%);"></div>
-      <span style="font-size:13px;font-weight:700;letter-spacing:0.08em;">QuantEdge</span>
+      <span style="font-size:13px;font-weight:700;letter-spacing:0.08em;">Anchor Ledger</span>
     </div>
     <div style="background:#111118;border:1px solid #1E1E2E;border-radius:6px;padding:24px;margin-bottom:20px;">
       ${body}
     </div>
     <div style="font-size:10px;color:#5A6478;">
-      QuantEdge · ${APP_URL}
+      Anchor Ledger · ${APP_URL}
     </div>
   </div>
 </body></html>`;

@@ -26,7 +26,7 @@ router.get("/unsubscribe", async (req, res, next) => {
     // Return a simple HTML page
     res.send(`
       <!DOCTYPE html><html>
-      <head><meta charset="utf-8"><title>Unsubscribed — QuantEdge</title></head>
+      <head><meta charset="utf-8"><title>Unsubscribed — Anchor Ledger</title></head>
       <body style="background:#0A0A0F;color:#E8F4F8;font-family:monospace;
                    display:flex;align-items:center;justify-content:center;
                    min-height:100vh;margin:0;">

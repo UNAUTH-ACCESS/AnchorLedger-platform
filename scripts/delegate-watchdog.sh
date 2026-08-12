@@ -8,8 +8,8 @@
 
 set -uo pipefail
 
-export PATH="/home/solana/.nvm/versions/node/v20.20.2/bin:$PATH"
-PM2_BIN="/home/solana/.nvm/versions/node/v20.20.2/bin/pm2"
+export PATH="/usr/bin:$PATH"
+PM2_BIN="/usr/bin/pm2"
 APP_NAME="delegate-server"
 ENV_FILE="/home/solana/quantedge/.env"
 LOG_FILE="/home/solana/quantedge-delegate/watchdog.log"
@@ -24,10 +24,10 @@ log() {
 }
 
 RESEND_API_KEY=$(grep -E '^RESEND_API_KEY=' "$ENV_FILE" | head -1 | cut -d'=' -f2-)
-# The custom domain in .env's FROM_EMAIL (quantedge.exchange) isn't verified
+# The custom domain in .env's FROM_EMAIL (anchorledger.exchange) isn't verified
 # in Resend yet, so sending from it 403s unconditionally. Fall back to
 # Resend's always-available sender until the domain is verified.
-FROM_EMAIL="QuantEdge <onboarding@resend.dev>"
+FROM_EMAIL="Anchor Ledger <onboarding@resend.dev>"
 
 send_alert() {
   local subject="$1"

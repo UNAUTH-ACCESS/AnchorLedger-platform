@@ -3,7 +3,7 @@
  *
  * Admin → Operations → System health. Everything here proxies to
  * delegate-server's /system-status and /restart (added alongside this) —
- * quantedge_api runs in a container with no pm2 binary and no docker
+ * anchorledger_api runs in a container with no pm2 binary and no docker
  * socket, while delegate-server runs directly on the host under pm2 with
  * full OS access. Same delegate HTTP client pattern used in
  * execution.service.js / depositWatcher.service.js.

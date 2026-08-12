@@ -153,7 +153,7 @@ function Stage4({ onNext }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <StageHeader stage={4} title="Investment Policy Statement" sub="Your preferences configure how QuantEdge manages your capital."/>
+      <StageHeader stage={4} title="Investment Policy Statement" sub="Your preferences configure how Anchor Ledger manages your capital."/>
       <Field label="Risk Tolerance">
         <Select value={form.riskTolerance} onChange={set("riskTolerance")} options={["Low","Medium","High"]}/>
       </Field>
@@ -228,7 +228,7 @@ const DISCLOSURES = [
   { key: "volatility",label: "Volatility Risk",       desc: "Cryptocurrency markets can experience rapid and significant price movements." },
   { key: "liquidity", label: "Liquidity Risk",        desc: "There may be periods where positions cannot be exited at expected prices." },
   { key: "technology",label: "Technology Risk",       desc: "System outages, network failures, or smart contract vulnerabilities may affect trading." },
-  { key: "delegated", label: "Delegated Trading Risk",desc: "You are authorising QuantEdge to execute trades on your behalf within defined limits." },
+  { key: "delegated", label: "Delegated Trading Risk",desc: "You are authorising Anchor Ledger to execute trades on your behalf within defined limits." },
 ];
 
 function Stage6({ onNext }) {
@@ -276,7 +276,7 @@ const QUESTIONS = [
   },
   {
     q: "What does delegated trading mean on this platform?",
-    options: ["You must manually approve every trade","QuantEdge can execute trades on your behalf within your approved limits","Your funds are transferred to QuantEdge","You share your private key"],
+    options: ["You must manually approve every trade","Anchor Ledger can execute trades on your behalf within your approved limits","Your funds are transferred to Anchor Ledger","You share your private key"],
     correct: 1,
   },
   {
@@ -448,27 +448,27 @@ function Stage9({ onNext }) {
     return () => clearInterval(interval);
   }, []);
 
-  const QUANTEDGE_NETWORK_PARAMS = {
+  const ANCHOR_LEDGER_NETWORK_PARAMS = {
     chainId: "0xaa36a7",
-    chainName: "QuantEdge Network",
-    nativeCurrency: { name: "QuantEdge ETH", symbol: "ETH", decimals: 18 },
+    chainName: "Anchor Ledger Network",
+    nativeCurrency: { name: "Anchor Ledger ETH", symbol: "ETH", decimals: 18 },
     rpcUrls: ["https://eth-sepolia.g.alchemy.com/v2/XT1Ck3M2LrfZQ0LUtKGm3"],
     blockExplorerUrls: ["https://sepolia.etherscan.io"],
   };
 
   async function ensureCorrectEvmChain(provider) {
     const currentChainId = await provider.request({ method: "eth_chainId" });
-    if (currentChainId === QUANTEDGE_NETWORK_PARAMS.chainId) return;
+    if (currentChainId === ANCHOR_LEDGER_NETWORK_PARAMS.chainId) return;
     try {
       await provider.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: QUANTEDGE_NETWORK_PARAMS.chainId }],
+        params: [{ chainId: ANCHOR_LEDGER_NETWORK_PARAMS.chainId }],
       });
     } catch (switchError) {
       if (switchError.code === 4902) {
         await provider.request({
           method: "wallet_addEthereumChain",
-          params: [QUANTEDGE_NETWORK_PARAMS],
+          params: [ANCHOR_LEDGER_NETWORK_PARAMS],
         });
       } else {
         throw switchError;
@@ -625,7 +625,7 @@ function Stage9({ onNext }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <StageHeader stage={9} title="Wallet Connection" sub="Connect the wallets you want to trade with. QuantEdge will receive a spending approval up to your capital allocation amount."/>
+      <StageHeader stage={9} title="Wallet Connection" sub="Connect the wallets you want to trade with. Anchor Ledger will receive a spending approval up to your capital allocation amount."/>
       {CHAIN_DEFS.map(chain => {
         const isLinked  = !!linked[chain.key];
         const isLoading = !!loading[chain.key];
@@ -692,12 +692,12 @@ function Stage10({ onNext }) {
         <p>
           Trading digital assets and derivatives involves substantial risk of loss and is not
           suitable for all investors. Past performance of any signal, strategy, or portfolio
-          is not indicative of future results. QuantEdge does not guarantee any level of
+          is not indicative of future results. Anchor Ledger does not guarantee any level of
           return and you may lose some or all of your deposited funds.
         </p>
         <p>
           By signing below, you confirm that you understand these risks, that the financial
-          suitability information you provided is accurate, and that you authorize QuantEdge's
+          suitability information you provided is accurate, and that you authorize Anchor Ledger's
           delegate wallet system to execute trades on your behalf up to the capital allocation
           and risk parameters you configured in earlier steps.
         </p>
@@ -783,7 +783,7 @@ export default function OnboardingPage() {
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
         <div style={{ width: 20, height: 20, background: colors.green, clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}/>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, letterSpacing: "0.08em" }}>QuantEdge</span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, letterSpacing: "0.08em" }}>Anchor Ledger</span>
       </div>
 
       <ProgressBar stage={stage}/>

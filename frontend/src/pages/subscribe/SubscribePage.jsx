@@ -43,7 +43,7 @@ export default function SubscribePage() {
           }}/>
           <div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, letterSpacing: "0.08em" }}>
-              QuantEdge
+              Anchor Ledger
             </div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: colors.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
               Systematic Trading
@@ -79,7 +79,7 @@ export default function SubscribePage() {
                 Systematic trading,<br/>built on validated research
               </h1>
               <p style={{ fontSize: 14, color: colors.muted, lineHeight: 1.7 }}>
-                QuantEdge runs a quantitative signal engine on live market data — not tips,
+                Anchor Ledger runs a quantitative signal engine on live market data — not tips,
                 not copy trading, not vibes. Every signal passes 8 statistical gates before
                 it reaches your portfolio.
               </p>

@@ -16,7 +16,7 @@ const logger = require("../../../lib/logger");
 
 const EMAIL_VERIFICATION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24h
 const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000; // 1h
-const APP_URL = `https://${process.env.DOMAIN || "quantedge.exchange"}`;
+const APP_URL = `https://${process.env.DOMAIN || "anchorledger.exchange"}`;
 
 function generateVerificationToken() {
   return crypto.randomBytes(32).toString("hex");
@@ -109,7 +109,7 @@ function generateTokens(userId) {
 // Refresh token now lives ONLY in an httpOnly cookie - never in a JSON body,
 // never touchable by JS, so an XSS payload can no longer exfiltrate it.
 // scoped to /api/v1/auth so it isn't sent on every single API request.
-const REFRESH_COOKIE_NAME = "qe_refresh_token";
+const REFRESH_COOKIE_NAME = "al_refresh_token";
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: true,      // requires HTTPS; correctly detected behind nginx because
@@ -288,7 +288,7 @@ router.post("/2fa/setup", authenticate, async (req, res, next) => {
     const secret = generateSecret();
     await prisma.user.update({ where: { id: req.user.id }, data: { twoFactorSecret: secret } });
 
-    const otpauthUrl = generateURI({ issuer: "QuantEdge", label: req.user.email, secret });
+    const otpauthUrl = generateURI({ issuer: "Anchor Ledger", label: req.user.email, secret });
     const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl);
 
     res.json({ success: true, data: { secret, qrCodeDataUrl } });

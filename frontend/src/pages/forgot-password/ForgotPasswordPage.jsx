@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
           }}/>
           <div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, letterSpacing: "0.08em", color: colors.text }}>
-              QuantEdge
+              Anchor Ledger
             </div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: colors.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
               Systematic Trading

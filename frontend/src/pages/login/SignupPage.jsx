@@ -73,7 +73,7 @@ export default function SignupPage() {
           }}/>
           <div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, letterSpacing: "0.08em", color: colors.text }}>
-              QuantEdge
+              Anchor Ledger
             </div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: colors.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
               Systematic Trading
@@ -101,7 +101,7 @@ export default function SignupPage() {
             fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted,
             marginBottom: 16, lineHeight: 1.6,
           }}>
-            By creating an account, you agree to QuantEdge's{" "}
+            By creating an account, you agree to Anchor Ledger's{" "}
             <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: colors.green, textDecoration: "none" }}>Terms of Service</a>
             {" "}and{" "}
             <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: colors.green, textDecoration: "none" }}>Privacy Policy</a>.

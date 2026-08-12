@@ -22,7 +22,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: api
-    container_name: quantedge_api
+    container_name: anchorledger_api
     restart: unless-stopped
     depends_on:
       postgres:
@@ -38,7 +38,7 @@ services:
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       PORT: 3000
       CORS_ORIGIN: https://${DOMAIN}
-      DELEGATE_SERVER_URL: http://172.19.0.1:3001
+      DELEGATE_SERVER_URL: http://host.docker.internal:3001
       DELEGATE_SHARED_SECRET: ${DELEGATE_SHARED_SECRET}
       KYC_KEYSTORE_PASSPHRASE: ${KYC_KEYSTORE_PASSPHRASE}
       RESEND_API_KEY: ${RESEND_API_KEY}
@@ -56,6 +56,8 @@ services:
       # wipes any uploaded KYC documents. Bind-mounted to the host so it
       # survives container recreation and can actually be backed up.
       - ./backend/storage/kyc-docs:/app/storage/kyc-docs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - internal
 
@@ -64,7 +66,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: worker
-    container_name: quantedge_worker
+    container_name: anchorledger_worker
     restart: unless-stopped
     depends_on:
       postgres:
@@ -72,7 +74,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-quantedge}:${POSTGRES_PASSWORD:-quantedge_secret}@postgres:5432/${POSTGRES_DB:-quantedge}?connection_limit=10&pool_timeout=20
-      DELEGATE_SERVER_URL: http://172.19.0.1:3001
+      DELEGATE_SERVER_URL: http://host.docker.internal:3001
       DELEGATE_SHARED_SECRET: ${DELEGATE_SHARED_SECRET}
       RESEND_API_KEY: ${RESEND_API_KEY}
       FROM_EMAIL: ${FROM_EMAIL}
@@ -97,13 +99,15 @@ services:
       SIM_SYNTHETIC_WIN_MAX_PCT: ${SIM_SYNTHETIC_WIN_MAX_PCT:-0.06}
       SIM_SYNTHETIC_LOSS_MIN_PCT: ${SIM_SYNTHETIC_LOSS_MIN_PCT:-0.01}
       SIM_SYNTHETIC_LOSS_MAX_PCT: ${SIM_SYNTHETIC_LOSS_MAX_PCT:-0.03}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - internal
 
 
   delegate:
     image: node:20-alpine
-    container_name: quantedge_delegate
+    container_name: anchorledger_delegate
     restart: unless-stopped
     working_dir: /app
     volumes:
@@ -123,14 +127,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: quantedge_frontend
+    container_name: anchorledger_frontend
     restart: unless-stopped
     networks:
       - internal
 
   nginx:
     image: nginx:alpine
-    container_name: quantedge_nginx
+    container_name: anchorledger_nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -146,7 +150,7 @@ services:
 
   certbot:
     image: certbot/certbot:latest
-    container_name: quantedge_certbot
+    container_name: anchorledger_certbot
     volumes:
       - ./nginx/certbot/conf:/etc/letsencrypt
       - ./nginx/certbot/www:/var/www/certbot

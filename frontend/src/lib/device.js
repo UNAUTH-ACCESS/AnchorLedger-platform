@@ -9,7 +9,7 @@
  * mobile in-app browsers report identically regardless of device).
  */
 
-const KEY = "qe_device_id";
+const KEY = "al_device_id";
 
 export function getOrCreateDeviceId() {
   let id = localStorage.getItem(KEY);

@@ -1,6 +1,6 @@
 /**
  * delegate.service.js
- * QuantEdge-aware wrapper around the delegate HTTP server.
+ * Anchor Ledger-aware wrapper around the delegate HTTP server.
  * Calls http://172.19.0.1:3001 (host delegate server) from inside Docker.
  */
 

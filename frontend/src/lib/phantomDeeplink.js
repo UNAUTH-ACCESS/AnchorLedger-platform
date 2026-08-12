@@ -25,8 +25,8 @@ import bs58 from "bs58";
 import client from "../api/client";
 
 const PHANTOM_BASE = "https://phantom.app/ul/v1";
-const SESSION_KEY  = "qe_phantom_session";
-const FLOW_KEY     = "qe_phantom_flow";
+const SESSION_KEY  = "al_phantom_session";
+const FLOW_KEY     = "al_phantom_flow";
 
 // ── Encoding ─────────────────────────────────────────────────────────────────
 
@@ -116,7 +116,7 @@ export function buildConnectUrl({ cluster = "devnet" } = {}) {
   // Stash the new keypair immediately, before navigating away — this is
   // the same principle as persisting the unlink signature the moment it's
   // obtained: nothing that matters lives only in memory across a redirect.
-  localStorage.setItem("qe_phantom_pending_keypair", JSON.stringify({
+  localStorage.setItem("al_phantom_pending_keypair", JSON.stringify({
     secretKey: b58encode(dappKeypair.secretKey),
     publicKey: b58encode(dappKeypair.publicKey),
   }));
@@ -156,7 +156,7 @@ export function parseConnectCallback(searchParams) {
   if (searchParams.get("errorCode")) {
     return { success: false, error: searchParams.get("errorMessage") || searchParams.get("errorCode") };
   }
-  const pendingRaw = localStorage.getItem("qe_phantom_pending_keypair");
+  const pendingRaw = localStorage.getItem("al_phantom_pending_keypair");
   if (!pendingRaw) throw new Error("No pending Phantom keypair found — cannot decrypt connect response");
   const pending = JSON.parse(pendingRaw);
   const dappSecretKey = b58decode(pending.secretKey);
@@ -166,7 +166,7 @@ export function parseConnectCallback(searchParams) {
   const decrypted = decryptPayload(searchParams.get("data"), searchParams.get("nonce"), phantomPublicKey, dappSecretKey);
 
   saveSession({ dappSecretKey, dappPublicKey, phantomPublicKey, session: decrypted.session, ownerAddress: decrypted.public_key });
-  localStorage.removeItem("qe_phantom_pending_keypair");
+  localStorage.removeItem("al_phantom_pending_keypair");
   return { success: true, publicKey: decrypted.public_key };
 }
 

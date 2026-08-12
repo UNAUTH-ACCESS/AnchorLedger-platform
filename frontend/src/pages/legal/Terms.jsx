@@ -5,23 +5,23 @@ export default function Terms() {
     <LegalLayout
       title="Terms of Service"
       effectiveDate="[TO BE COMPLETED UPON LAUNCH]"
-      operator="[LEGAL NAME / ENTITY — TO BE COMPLETED. As of this draft, QuantEdge is not operated through an incorporated entity. This document assumes an entity will be formed before these Terms take effect; the operator's legal name and structure must be inserted before publication.]"
+      operator="[LEGAL NAME / ENTITY — TO BE COMPLETED. As of this draft, Anchor Ledger is not operated through an incorporated entity. This document assumes an entity will be formed before these Terms take effect; the operator's legal name and structure must be inserted before publication.]"
     >
       <Section n={1} title="Acceptance of These Terms">
         <P>
-          By creating an account, linking a wallet, or otherwise using the QuantEdge platform ("QuantEdge," "we," "us," or "the Platform"), you ("you," "User," or "Client") agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform.
+          By creating an account, linking a wallet, or otherwise using the Anchor Ledger platform ("Anchor Ledger," "we," "us," or "the Platform"), you ("you," "User," or "Client") agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform.
         </P>
       </Section>
 
       <Section n={2} title="Description of Service">
         <P>
-          QuantEdge is an algorithmic digital-asset trading platform that generates trading signals and, upon your authorization, executes trades on your behalf across supported blockchain networks (currently Solana, Ethereum, and Tron) using a delegated wallet execution model described in Section 6.
+          Anchor Ledger is an algorithmic digital-asset trading platform that generates trading signals and, upon your authorization, executes trades on your behalf across supported blockchain networks (currently Solana, Ethereum, and Tron) using a delegated wallet execution model described in Section 6.
         </P>
         <Callout>
-          <strong>Current mode of operation:</strong> QuantEdge currently operates in a simulated/paper-trading mode. Signals are generated from live market data, and gains and losses are calculated and settled as if trades were executed at real market prices, but no order is currently placed on any external exchange or trading venue. Real order execution against live venues is planned as a future stage of development, and Users will be notified when that transition occurs.
+          <strong>Current mode of operation:</strong> Anchor Ledger currently operates in a simulated/paper-trading mode. Signals are generated from live market data, and gains and losses are calculated and settled as if trades were executed at real market prices, but no order is currently placed on any external exchange or trading venue. Real order execution against live venues is planned as a future stage of development, and Users will be notified when that transition occurs.
         </Callout>
         <P>
-          QuantEdge does not custody your funds in the traditional sense — trading authority is granted directly on-chain, to a capped amount you set, and can be revoked by you at any time. QuantEdge is not a bank, broker-dealer, or custodian, and is not currently claiming licensure as any such regulated entity.
+          Anchor Ledger does not custody your funds in the traditional sense — trading authority is granted directly on-chain, to a capped amount you set, and can be revoked by you at any time. Anchor Ledger is not a bank, broker-dealer, or custodian, and is not currently claiming licensure as any such regulated entity.
         </P>
       </Section>
 
@@ -42,42 +42,42 @@ export default function Terms() {
 
       <Section n={5} title="Risks of Digital Asset Trading">
         <Callout>
-          <strong>Simulated trading, real settlement:</strong> QuantEdge currently operates in a simulated/paper-trading mode: signals are generated from live market data, and gains/losses are calculated and settled as if trades were executed at real market prices, but no order is currently placed on any external exchange or venue. Real order execution against live venues is planned as a future stage of development, and Users will be notified when that transition occurs. This does not mean the Platform carries no financial risk to you today — see Section 6 regarding delegated on-chain fund movement, which is real regardless of simulated trading status.
+          <strong>Simulated trading, real settlement:</strong> Anchor Ledger currently operates in a simulated/paper-trading mode: signals are generated from live market data, and gains/losses are calculated and settled as if trades were executed at real market prices, but no order is currently placed on any external exchange or venue. Real order execution against live venues is planned as a future stage of development, and Users will be notified when that transition occurs. This does not mean the Platform carries no financial risk to you today — see Section 6 regarding delegated on-chain fund movement, which is real regardless of simulated trading status.
         </Callout>
         <P>You acknowledge and accept the following risks, among others inherent to digital asset trading:</P>
         <UL items={[
           "Digital assets are highly volatile and you may lose some or all of the funds you make available for trading.",
           "Blockchain transactions are generally irreversible; errors, including those caused by software bugs, cannot always be undone.",
-          "Smart contracts and delegated-authority mechanisms carry inherent technical risk, including the possibility of bugs in QuantEdge's own systems or in third-party protocols it interacts with.",
+          "Smart contracts and delegated-authority mechanisms carry inherent technical risk, including the possibility of bugs in Anchor Ledger's own systems or in third-party protocols it interacts with.",
           "Past performance of any signal or strategy is not indicative of future results.",
-          "QuantEdge may currently be operating in a test/limited-release capacity on test networks or with limited real-fund exposure; the specific status of the Platform at any given time will be communicated to Users [MECHANISM TO BE CONFIRMED].",
+          "Anchor Ledger may currently be operating in a test/limited-release capacity on test networks or with limited real-fund exposure; the specific status of the Platform at any given time will be communicated to Users [MECHANISM TO BE CONFIRMED].",
         ]}/>
         <P>
-          You agree that you are using the Platform at your own risk and that QuantEdge's liability for any loss is limited as set out in Section 13.
+          You agree that you are using the Platform at your own risk and that Anchor Ledger's liability for any loss is limited as set out in Section 13.
         </P>
       </Section>
 
       <Section n={6} title="Delegated Trading Authority">
         <P>
-          To use the Platform's automated trading features, you authorize a QuantEdge-controlled delegate address to execute trades on your behalf, up to a maximum cumulative amount that you set ("Approval Cap"). This authorization:
+          To use the Platform's automated trading features, you authorize a Anchor Ledger-controlled delegate address to execute trades on your behalf, up to a maximum cumulative amount that you set ("Approval Cap"). This authorization:
         </P>
         <UL items={[
-          "Is granted by a transaction you sign yourself, using your own wallet — QuantEdge never has access to your wallet's private keys.",
+          "Is granted by a transaction you sign yourself, using your own wallet — Anchor Ledger never has access to your wallet's private keys.",
           "Is limited to the Approval Cap you set, and does not permit withdrawal of funds beyond that amount.",
           "May be revoked by you at any time through the Platform, which submits an on-chain revocation transaction; revocation takes effect once that transaction is confirmed on the relevant network, not merely when requested.",
-          "Does not make QuantEdge a custodian of your assets — your assets remain in your own wallet at all times, subject only to the delegated authority described above.",
+          "Does not make Anchor Ledger a custodian of your assets — your assets remain in your own wallet at all times, subject only to the delegated authority described above.",
         ]}/>
       </Section>
 
       <Section n={7} title="Identity Verification (KYC)">
         <P>
-          QuantEdge applies a reasonable identity-verification process before enabling certain features. You agree to provide accurate, current information and supporting documentation as requested, and acknowledge that QuantEdge may approve, reject, or request additional information at its discretion. QuantEdge is not currently representing that this process satisfies the identity-verification requirements of any specific regulatory regime or license; it is a risk-management measure appropriate to the current scale and nature of the Platform, and may be revised as the Platform and its regulatory posture evolve.
+          Anchor Ledger applies a reasonable identity-verification process before enabling certain features. You agree to provide accurate, current information and supporting documentation as requested, and acknowledge that Anchor Ledger may approve, reject, or request additional information at its discretion. Anchor Ledger is not currently representing that this process satisfies the identity-verification requirements of any specific regulatory regime or license; it is a risk-management measure appropriate to the current scale and nature of the Platform, and may be revised as the Platform and its regulatory posture evolve.
         </P>
       </Section>
 
       <Section n={8} title="Account Security">
         <P>
-          You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs through your account. Notify QuantEdge immediately of any unauthorized access. QuantEdge offers optional two-factor authentication and encourages its use.
+          You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs through your account. Notify Anchor Ledger immediately of any unauthorized access. Anchor Ledger offers optional two-factor authentication and encourages its use.
         </P>
       </Section>
 
@@ -95,7 +95,7 @@ export default function Terms() {
 
       <Section n={11} title="Suspension and Termination">
         <P>
-          QuantEdge may suspend or terminate your access to the Platform, with or without notice, if it reasonably believes you have violated these Terms, if required by law, or if necessary to protect the Platform or other Users. You may stop using the Platform and revoke delegated authority at any time. Termination does not affect your ownership of your own on-chain assets.
+          Anchor Ledger may suspend or terminate your access to the Platform, with or without notice, if it reasonably believes you have violated these Terms, if required by law, or if necessary to protect the Platform or other Users. You may stop using the Platform and revoke delegated authority at any time. Termination does not affect your ownership of your own on-chain assets.
         </P>
       </Section>
 
@@ -113,7 +113,7 @@ export default function Terms() {
 
       <Section n={14} title="Indemnification">
         <P>
-          You agree to indemnify and hold harmless QuantEdge, its operator, and their respective affiliates, officers, and agents from any claims, damages, or expenses (including reasonable legal fees) arising from your use of the Platform, your violation of these Terms, or your violation of any applicable law.
+          You agree to indemnify and hold harmless Anchor Ledger, its operator, and their respective affiliates, officers, and agents from any claims, damages, or expenses (including reasonable legal fees) arising from your use of the Platform, your violation of these Terms, or your violation of any applicable law.
         </P>
       </Section>
 
@@ -125,7 +125,7 @@ export default function Terms() {
 
       <Section n={16} title="Changes to These Terms">
         <P>
-          QuantEdge may update these Terms from time to time. Material changes will be communicated to Users through the Platform or by email prior to taking effect. Continued use of the Platform after changes take effect constitutes acceptance.
+          Anchor Ledger may update these Terms from time to time. Material changes will be communicated to Users through the Platform or by email prior to taking effect. Continued use of the Platform after changes take effect constitutes acceptance.
         </P>
       </Section>
 

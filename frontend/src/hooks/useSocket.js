@@ -32,8 +32,8 @@ export function useSocket() {
         setWsStatus("connected");
         socket.emit("subscribe:signals");
         // Subscribe to user and workspace rooms for notifications
-        const userId      = localStorage.getItem("qe_user_id");
-        const workspaceId = localStorage.getItem("qe_workspace_id");
+        const userId      = localStorage.getItem("al_user_id");
+        const workspaceId = localStorage.getItem("al_workspace_id");
         if (userId)      socket.emit("subscribe:user",      userId);
         if (workspaceId) socket.emit("subscribe:workspace", workspaceId);
       });

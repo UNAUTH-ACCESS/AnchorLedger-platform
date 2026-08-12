@@ -25,7 +25,7 @@ function isMobileDevice() {
 // tronlinkoutside:// protocol. Singleton: connect() state needs to persist
 // between getAddress() and sendApproval() within one flow.
 const tronLinkAdapter = new TronLinkAdapter({
-  dappName: "QuantEdge",
+  dappName: "Anchor Ledger",
   dappIcon: `${window.location.origin}/icon-192.png`,
 });
 
@@ -142,7 +142,7 @@ const CHAINS = [
 // unlink-confirm independently verifies the delegate is actually gone
 // on-chain before trusting any signature passed here — so a stale/replayed
 // entry can't incorrectly mark a wallet unlinked that's still delegated.
-const pendingUnlinkKey = (chainKey) => `qe_pending_unlink_${chainKey}`;
+const pendingUnlinkKey = (chainKey) => `al_pending_unlink_${chainKey}`;
 
 function getPendingUnlink(chainKey) {
   try {
@@ -643,7 +643,7 @@ export default function WalletConnect() {
         </h1>
         <p style={{ fontSize: 12, color: colors.muted, margin: 0, lineHeight: 1.6 }}>
           Each chain requires its own wallet. Connect the chains you want to trade.
-          One approval grants QuantEdge permission to execute trades automatically.
+          One approval grants Anchor Ledger permission to execute trades automatically.
         </p>
       </div>
 
@@ -676,7 +676,7 @@ export default function WalletConnect() {
               {linkedCount} wallet{linkedCount > 1 ? "s" : ""} linked
             </div>
             <div style={{ fontSize: 10, color: colors.muted, marginTop: 2 }}>
-              QuantEdge will trade automatically when signals fire.
+              Anchor Ledger will trade automatically when signals fire.
             </div>
           </div>
         </div>
@@ -698,7 +698,7 @@ export default function WalletConnect() {
         </div>
         {[
           ["Connect",  "Your wallet signs a one-time approval transaction."],
-          ["Delegate", "QuantEdge receives permission to move up to 10,000 USDT on your behalf."],
+          ["Delegate", "Anchor Ledger receives permission to move up to 10,000 USDT on your behalf."],
           ["Trade",    "When a signal fires, trades execute automatically — no manual action needed."],
           ["Revoke",   "Unlink at any time to cancel all permissions instantly."],
         ].map(([title, desc]) => (

@@ -1,11 +1,11 @@
 /**
- * QuantEdge Service Worker
+ * Anchor Ledger Service Worker
  *
  * Handles incoming push events and displays native OS notifications.
  * Click handler deep-links into the relevant page.
  */
 
-const APP_NAME = "QuantEdge";
+const APP_NAME = "Anchor Ledger";
 const APP_URL  = self.location.origin;
 
 // Receive push notification
@@ -23,7 +23,7 @@ self.addEventListener("push", (event) => {
     body:    data.body || "",
     icon:    "/icon-192.png",
     badge:   "/badge-72.png",
-    tag:     data.tag || "quantedge-notification",
+    tag:     data.tag || "anchorledger-notification",
     data:    data.data || {},
     vibrate: [200, 100, 200],
     actions: [

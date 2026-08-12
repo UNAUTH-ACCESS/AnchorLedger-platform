@@ -87,13 +87,13 @@ async function getSubscribers(status = "SUBSCRIBED", limit = 100, offset = 0) {
 // ── Email sending ─────────────────────────────────────────────────────────────
 
 async function sendWelcomeEmail(subscriber) {
-  const subject = "Welcome to QuantEdge — systematic trading, built different";
+  const subject = "Welcome to Anchor Ledger — systematic trading, built different";
   const html = buildEmail(subscriber, subject, `
     <h2 style="color:#00D4AA;font-size:20px;margin-bottom:16px;">
-      Welcome to QuantEdge
+      Welcome to Anchor Ledger
     </h2>
     <p style="margin-bottom:16px;">
-      You're on the list. QuantEdge is a systematic quantitative trading platform
+      You're on the list. Anchor Ledger is a systematic quantitative trading platform
       built on a validated research framework — not vibes, not signals from Telegram,
       not copy trading.
     </p>
@@ -160,7 +160,7 @@ function buildEmail(subscriber, subject, bodyHtml) {
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;">
       <div style="width:20px;height:20px;background:#00D4AA;
                   clip-path:polygon(50% 0%,100% 100%,0% 100%);"></div>
-      <span style="font-size:14px;font-weight:700;letter-spacing:0.08em;">QuantEdge</span>
+      <span style="font-size:14px;font-weight:700;letter-spacing:0.08em;">Anchor Ledger</span>
     </div>
 
     <div style="background:#111118;border:1px solid #1E1E2E;border-radius:6px;padding:28px;margin-bottom:24px;">

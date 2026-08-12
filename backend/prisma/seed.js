@@ -14,7 +14,7 @@ const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding QuantEdge database...");
+  console.log("Seeding Anchor Ledger database...");
 
   // ── Roles ─────────────────────────────────────────────────────────────────
   let platformAdminRole = await prisma.role.findFirst({ where: { name: "PLATFORM_ADMIN", workspaceId: null } });
@@ -119,10 +119,10 @@ async function main() {
   // ── Platform Admin User ───────────────────────────────────────────────────
   const adminPasswordHash = await bcrypt.hash("Admin1234!", 12);
   const adminUser = await prisma.user.upsert({
-    where: { email: "admin@quantedge.io" },
+    where: { email: "admin@anchorledger.io" },
     update: {},
     create: {
-      email: "admin@quantedge.io",
+      email: "admin@anchorledger.io",
       passwordHash: adminPasswordHash,
       name: "Platform Admin",
       status: "ACTIVE",
@@ -142,10 +142,10 @@ async function main() {
   // ── Default Workspace + Owner ─────────────────────────────────────────────
   const ownerPasswordHash = await bcrypt.hash("Trader1234!", 12);
   const ownerUser = await prisma.user.upsert({
-    where: { email: "else@quantedge.io" },
+    where: { email: "else@anchorledger.io" },
     update: {},
     create: {
-      email: "else@quantedge.io",
+      email: "else@anchorledger.io",
       passwordHash: ownerPasswordHash,
       name: "ELSE",
       status: "ACTIVE",

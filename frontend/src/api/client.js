@@ -12,7 +12,7 @@ const client = axios.create({
 // ── Request interceptor — inject auth + workspace headers ──────────────────
 client.interceptors.request.use((config) => {
   const token = getAccessToken();
-  const workspaceId = localStorage.getItem("qe_workspace_id");
+  const workspaceId = localStorage.getItem("al_workspace_id");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   if (workspaceId) config.headers["x-workspace-id"] = workspaceId;
   return config;
@@ -57,8 +57,8 @@ client.interceptors.response.use(
         refreshQueue.forEach(({ reject }) => reject());
         refreshQueue = [];
         clearAccessToken();
-        localStorage.removeItem("qe_user_id");
-        localStorage.removeItem("qe_workspace_id");
+        localStorage.removeItem("al_user_id");
+        localStorage.removeItem("al_workspace_id");
         window.location.href = "/login";
         return Promise.reject(normalizeError(err));
       } finally {

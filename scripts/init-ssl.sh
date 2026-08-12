@@ -1,5 +1,5 @@
 #!/bin/bash
-# QuantEdge SSL Bootstrap Script
+# Anchor Ledger SSL Bootstrap Script
 # Run once after pointing DuckDNS to your server IP
 # Usage: ./scripts/init-ssl.sh your-subdomain.duckdns.org your@email.com
 
@@ -9,7 +9,7 @@ DOMAIN=${1:?"Usage: $0 <domain> <email>"}
 EMAIL=${2:?"Usage: $0 <domain> <email>"}
 
 echo "========================================"
-echo "  QuantEdge SSL Bootstrap"
+echo "  Anchor Ledger SSL Bootstrap"
 echo "  Domain: $DOMAIN"
 echo "  Email:  $EMAIL"
 echo "========================================"

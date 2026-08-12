@@ -73,7 +73,7 @@ function InnerProvider({ children }) {
           adapters: [adapter],
           networks: [mainnet, sepolia],
           projectId: PROJECT_ID,
-          metadata: { name: "QuantEdge", description: "Multi-chain algorithmic trading", url: window.location.origin, icons: [] },
+          metadata: { name: "Anchor Ledger", description: "Multi-chain algorithmic trading", url: window.location.origin, icons: [] },
           features: { analytics: false },
         });
       } catch(e) {

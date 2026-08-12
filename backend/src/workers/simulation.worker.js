@@ -1,5 +1,5 @@
 /**
- * QuantEdge Simulation Worker — Full Autonomous Cycle
+ * Anchor Ledger Simulation Worker — Full Autonomous Cycle
  *
  * Entry: Real Bybit features → signal → evaluate → auto-sign → fill → position
  * Exit:  Stop loss breach | Signal reversal | TTL expired → closePosition()

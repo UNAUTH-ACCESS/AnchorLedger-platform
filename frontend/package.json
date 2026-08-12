@@ -1,5 +1,5 @@
 {
-  "name": "quantedge-frontend",
+  "name": "anchorledger-frontend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -35,5 +35,12 @@
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.3.1",
     "vite-plugin-node-polyfills": "^0.28.0"
+  },
+  "allowScripts": {
+    "@reown/appkit@1.8.21": true,
+    "@reown/appkit@1.7.2": true,
+    "bufferutil@4.1.0": true,
+    "esbuild@0.21.5": true,
+    "utf-8-validate@6.0.6": true
   }
 }

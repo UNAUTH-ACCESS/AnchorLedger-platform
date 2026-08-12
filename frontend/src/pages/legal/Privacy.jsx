@@ -9,7 +9,7 @@ export default function Privacy() {
     >
       <Section n={1} title="Introduction">
         <P>
-          This Privacy Policy explains what information QuantEdge ("we," "us") collects when you use the Platform, how it is used, and the choices available to you. It applies to all Users of the Platform.
+          This Privacy Policy explains what information Anchor Ledger ("we," "us") collects when you use the Platform, how it is used, and the choices available to you. It applies to all Users of the Platform.
         </P>
       </Section>
 
@@ -53,7 +53,7 @@ export default function Privacy() {
         <P>We share information only as necessary to operate the Platform:</P>
         <UL items={[
           "With infrastructure and service providers who process data on our behalf (e.g., our email-delivery provider, for sending transactional notifications), under confidentiality obligations.",
-          "With blockchain networks themselves — note that wallet addresses and on-chain transactions are, by the nature of public blockchains, visible on-chain regardless of anything QuantEdge does.",
+          "With blockchain networks themselves — note that wallet addresses and on-chain transactions are, by the nature of public blockchains, visible on-chain regardless of anything Anchor Ledger does.",
           "Where required by law, regulation, or valid legal process.",
           "In connection with a merger, acquisition, or sale of assets, subject to continued protection of your information under materially similar terms.",
         ]}/>
@@ -70,7 +70,7 @@ export default function Privacy() {
 
       <Section n={6} title="Data Retention">
         <P>
-          We retain account and identity-verification information for as long as your account is active and for a period afterward as required for legal, security, or dispute-resolution purposes [SPECIFIC RETENTION PERIODS TO BE SET WITH COUNSEL, informed by applicable law]. On-chain data (wallet addresses, transaction records) persists on public blockchains independently of QuantEdge and cannot be deleted by us.
+          We retain account and identity-verification information for as long as your account is active and for a period afterward as required for legal, security, or dispute-resolution purposes [SPECIFIC RETENTION PERIODS TO BE SET WITH COUNSEL, informed by applicable law]. On-chain data (wallet addresses, transaction records) persists on public blockchains independently of Anchor Ledger and cannot be deleted by us.
         </P>
       </Section>
 

@@ -99,7 +99,7 @@ function Sidebar({ onNav }) {
         }}/>
         <div>
           <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, letterSpacing: "0.08em" }}>
-            QuantEdge
+            Anchor Ledger
           </div>
           <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: colors.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
             {activeWorkspace?.name || "—"}
@@ -238,7 +238,7 @@ export function AppShell({ children }) {
               fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
               color: colors.green,
             }}>
-              QE
+              AL
             </div>
           )}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
