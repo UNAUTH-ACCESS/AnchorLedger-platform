@@ -90,56 +90,65 @@ function calculateUnrealizedPnl(side, size, entryPrice, currentPrice) {
   return (currentPrice - entryPrice) * size;
 }
 
-// Real starting cash for a portfolio's FIRST-EVER snapshot: sum of
-// completed deposits into the portfolio's workspace. Deposit has no
-// portfolioId (only workspaceId) - its "allocations" field is a per-chain
-// split of where the minted USDT landed, not a per-portfolio split - so
-// workspace-level completed deposits is the correct real signal here.
-// Returns 0 (not a placeholder) if no deposits have completed yet, which is
-// the honest state while chains are still on devnet/testnet.
-async function getWorkspaceStartingCash(workspaceId) {
-  const result = await prisma.deposit.aggregate({
-    where: { workspaceId, status: "COMPLETE" },
-    _sum: { depositAmount: true },
-  });
-  return result._sum.depositAmount || 0;
+// Atomically claims every COMPLETE, not-yet-credited deposit for a
+// workspace and returns their total. Uses a single UPDATE...RETURNING
+// statement (not a separate SELECT-then-UPDATE) so this is safe under
+// concurrent callers: Postgres row-locks the matched rows for the
+// duration of the UPDATE, so a second concurrent call for the same
+// workspace can only see rows this call hasn't already claimed - a
+// deposit is credited exactly once, ever, by construction, not by
+// convention. Callers MUST run this inside the same transaction (`tx`)
+// that persists whatever consumes the returned amount (e.g. a new
+// PortfolioSnapshot), so a crash between the two can't lose or duplicate
+// the credit.
+async function creditPendingDeposits(tx, workspaceId) {
+  const rows = await tx.$queryRaw`
+    UPDATE deposits SET credited = true
+    WHERE "workspaceId" = ${workspaceId} AND status = 'COMPLETE' AND credited = false
+    RETURNING "depositAmount"
+  `;
+  return rows.reduce((sum, r) => sum + r.depositAmount, 0);
 }
 
-// Update portfolio snapshot with current NAV
+// Update portfolio snapshot with current NAV. Runs inside a transaction so
+// that "claim pending deposits" and "persist the snapshot that reflects
+// them" happen atomically - a crash or concurrent call can't credit a
+// deposit without a snapshot recording it, or vice versa.
 async function snapshotPortfolio(portfolioId) {
-  const positions = await prisma.position.findMany({
-    where: { portfolioId, status: "OPEN" },
-  });
+  return prisma.$transaction(async (tx) => {
+    const positions = await tx.position.findMany({
+      where: { portfolioId, status: "OPEN" },
+    });
 
-  const unrealizedPnl = positions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
-  const invested = positions.reduce((sum, p) => sum + p.size * p.entryPrice, 0);
+    const unrealizedPnl = positions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
+    const invested = positions.reduce((sum, p) => sum + p.size * p.entryPrice, 0);
 
-  const lastSnapshot = await prisma.portfolioSnapshot.findFirst({
-    where: { portfolioId },
-    orderBy: { snappedAt: "desc" },
-  });
-
-  const realizedPnl = lastSnapshot?.realizedPnl || 0;
-
-  let startingCash;
-  if (lastSnapshot) {
-    startingCash = lastSnapshot.cash;
-  } else {
-    // First snapshot ever for this portfolio - no more silent 70500
-    // placeholder. Real starting cash, or honestly 0 if nothing has
-    // actually been deposited yet.
-    const portfolio = await prisma.portfolio.findUnique({
+    const portfolio = await tx.portfolio.findUnique({
       where: { id: portfolioId },
       select: { workspaceId: true },
     });
-    startingCash = portfolio ? await getWorkspaceStartingCash(portfolio.workspaceId) : 0;
-  }
 
-  const nav = startingCash + unrealizedPnl + realizedPnl;
+    const lastSnapshot = await tx.portfolioSnapshot.findFirst({
+      where: { portfolioId },
+      orderBy: { snappedAt: "desc" },
+    });
 
-  return prisma.portfolioSnapshot.create({
-    data: { portfolioId, nav, invested, unrealizedPnl, realizedPnl, cash: nav - invested },
+    const realizedPnl = lastSnapshot?.realizedPnl || 0;
+    // No more "only on the first-ever snapshot" branch: every snapshot
+    // (first or not) carries forward whatever cash existed, then tops it
+    // up with any deposits that completed since the last one - a repeat
+    // deposit now actually reaches the tradeable balance instead of
+    // silently vanishing.
+    const previousCash = lastSnapshot ? lastSnapshot.cash : 0;
+    const newlyCredited = portfolio ? await creditPendingDeposits(tx, portfolio.workspaceId) : 0;
+    const startingCash = previousCash + newlyCredited;
+
+    const nav = startingCash + unrealizedPnl + realizedPnl;
+
+    return tx.portfolioSnapshot.create({
+      data: { portfolioId, nav, invested, unrealizedPnl, realizedPnl, cash: nav - invested },
+    });
   });
 }
 
-module.exports = { upsertPositionFromFill, updatePositionPrices, snapshotPortfolio };
+module.exports = { upsertPositionFromFill, updatePositionPrices, snapshotPortfolio, creditPendingDeposits };

@@ -30,6 +30,33 @@ import WalletCallback from "./pages/wallets/WalletCallback";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 import KycSubmission from "./pages/kyc/KycSubmission";
+import WithdrawalPage from "./pages/withdrawals/WithdrawalPage";
+import HomePage from "./pages/home/HomePage";
+
+function RootRoute() {
+  const { status } = useAuthStore();
+
+  // Don't flash the marketing page for a returning session that's about to
+  // resolve to "authenticated" — same loading treatment RouteGuard uses.
+  if (status === "authenticating") {
+    return (
+      <div style={{
+        minHeight: "100vh", background: "#0A0A0F",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+        color: "#5A6478", letterSpacing: "0.06em",
+      }}>
+        Loading…
+      </div>
+    );
+  }
+
+  if (status === "authenticated") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <HomePage/>;
+}
 
 function AuthenticatedApp() {
   useSocket(); // Initialize WebSocket connection
@@ -58,6 +85,7 @@ function AuthenticatedApp() {
         <Route path="/audit"      element={<AuditLog/>}  />
         <Route path="/settings"   element={<Settings/>}  />
         <Route path="/wallets"   element={<WalletConnect/>} />
+        <Route path="/withdrawals" element={<WithdrawalPage/>} />
         <Route path="/wallet-callback" element={<WalletCallback/>} />
         <Route path="/pnl"      element={<PnLDashboard/>} />
         <Route path="/admin/kyc"  element={<AdminKycQueue/>} />
@@ -78,6 +106,7 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/" element={<RootRoute/>} />
       <Route path="/login" element={<LoginPage/>} />
       <Route path="/signup" element={<SignupPage/>} />
       <Route path="/verify-email" element={<VerifyEmailPage/>} />

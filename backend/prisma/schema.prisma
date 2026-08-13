@@ -342,6 +342,7 @@ model Workspace {
   notificationPreferences NotificationPreference[]
   pushSubscriptions       PushSubscription[]
   deposits                Deposit[]
+  withdrawals             Withdrawal[]
 
   @@index([slug])
   @@map("workspaces")
@@ -474,13 +475,45 @@ model Deposit {
   status         String    @default("DETECTED")
   allocations    Json?
   errorMessage   String?
+  // Idempotency marker for crediting this deposit's amount into a
+  // portfolio's tradeable cash (see position.service.js snapshotPortfolio).
+  // A COMPLETE deposit is credited exactly once, ever - this flag (not a
+  // timestamp cutoff) is what guarantees that under concurrent/retried
+  // snapshot calls.
+  credited       Boolean   @default(false)
   createdAt      DateTime  @default(now())
   completedAt    DateTime?
 
   @@index([workspaceId])
   @@index([walletId])
   @@index([status])
+  @@index([workspaceId, status, credited])
   @@map("deposits")
+}
+
+model Withdrawal {
+  id                  String    @id @default(uuid())
+  workspaceId         String
+  workspace           Workspace @relation(fields: [workspaceId], references: [id])
+  userId              String
+  portfolioId         String
+  portfolio           Portfolio @relation(fields: [portfolioId], references: [id])
+  amount              Float
+  destinationAddress  String
+  // PENDING -> PAID (admin verified an on-chain payout tx) or
+  // PENDING -> REJECTED (admin declined; the optimistic debit is reversed).
+  status              String    @default("PENDING")
+  payoutTxHash        String?
+  rejectionReason     String?
+  requestedAt         DateTime  @default(now())
+  reviewedAt          DateTime?
+  reviewedByAdminId   String?
+  completedAt         DateTime?
+
+  @@index([workspaceId])
+  @@index([portfolioId])
+  @@index([status])
+  @@map("withdrawals")
 }
 
 model Wallet {
@@ -535,6 +568,7 @@ model Portfolio {
   positions     Position[]
   evaluations   PortfolioSignalEvaluation[]
   signalConfigs PortfolioSignalConfig[]
+  withdrawals   Withdrawal[]
 
   @@index([workspaceId])
   @@map("portfolios")

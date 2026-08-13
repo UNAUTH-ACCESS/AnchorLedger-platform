@@ -1,7 +1,7 @@
 /**
  * delegate.service.js
  * Anchor Ledger-aware wrapper around the delegate HTTP server.
- * Calls http://172.19.0.1:3001 (host delegate server) from inside Docker.
+ * Calls http://host.docker.internal:3001 (host delegate server) from inside Docker.
  */
 
 const prisma = require("../prisma");
@@ -171,6 +171,17 @@ const DelegateService = {
 
     logger.info("Trade executed", { workspaceId, chains, amountUSDT, summary: result.summary });
     return result;
+  },
+
+  // Never trust an admin's "mark as paid" on its word alone — the delegate
+  // server inspects the actual on-chain pre/post USDC balance change for
+  // this signature. Same "verify against the delegate server, not the
+  // caller's claim" pattern as confirmLink()/getWorkspaceWalletStatus()
+  // above, just checking a specific transfer's effect instead of a
+  // resulting allowance.
+  async verifyPayout(signature, expectedAmountUSDC, expectedDestination) {
+    const data = await delegatePost("/verify-payout", { signature, expectedAmountUSDC, expectedDestination });
+    return { verified: data.verified, reason: data.reason, details: data.details };
   }
 };
 

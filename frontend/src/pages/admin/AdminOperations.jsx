@@ -13,6 +13,7 @@ const TABS = [
   { id: "settlements",   label: "Stuck Settlements" },
   { id: "notifications", label: "Delivery Failures" },
   { id: "wallets",       label: "Wallets" },
+  { id: "withdrawals",   label: "Withdrawals" },
   { id: "audit",         label: "Audit Log" },
 ];
 
@@ -361,6 +362,145 @@ function WalletsSection() {
   );
 }
 
+// ── Withdrawals ──────────────────────────────────────────────────────────────
+
+const WITHDRAWAL_STATUS_COLOR = { PENDING: colors.orange, PAID: colors.green, REJECTED: colors.red };
+
+function WithdrawalActions({ withdrawal, onDone }) {
+  const [mode, setMode] = useState(null); // null | "pay" | "reject"
+  const [payoutTxHash, setPayoutTxHash] = useState("");
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  if (withdrawal.status !== "PENDING") {
+    return <span style={{ fontSize: 9, color: colors.muted }}>
+      {withdrawal.status === "PAID" ? `Paid — ${withdrawal.payoutTxHash?.slice(0, 12)}…` : (withdrawal.rejectionReason || "Rejected")}
+    </span>;
+  }
+
+  const handleMarkPaid = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await adminApi.markWithdrawalPaid(withdrawal.id, payoutTxHash.trim());
+      onDone?.();
+    } catch (err) {
+      setError(err.response?.data?.error?.message || "Verification failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await adminApi.rejectWithdrawal(withdrawal.id, reason.trim());
+      onDone?.();
+    } catch (err) {
+      setError(err.response?.data?.error?.message || "Reject failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (mode === "pay") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 220 }}>
+        <input
+          value={payoutTxHash} onChange={(e) => setPayoutTxHash(e.target.value)}
+          placeholder="On-chain payout tx signature"
+          style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", padding: "4px 6px", background: colors.surface2, border: `1px solid ${colors.border2}`, borderRadius: 3, color: colors.text }}
+        />
+        {error && <div style={{ fontSize: 9, color: colors.red }}>{error}</div>}
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={handleMarkPaid} disabled={submitting || !payoutTxHash.trim()} style={{ fontSize: 9, padding: "3px 8px", background: colors.green, color: colors.bg, border: "none", borderRadius: 3, cursor: "pointer" }}>
+            {submitting ? "Verifying on-chain…" : "Confirm Paid"}
+          </button>
+          <button onClick={() => setMode(null)} disabled={submitting} style={{ fontSize: 9, padding: "3px 8px", background: "transparent", color: colors.muted, border: `1px solid ${colors.border2}`, borderRadius: 3, cursor: "pointer" }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "reject") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 220 }}>
+        <input
+          value={reason} onChange={(e) => setReason(e.target.value)}
+          placeholder="Reason (optional)"
+          style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", padding: "4px 6px", background: colors.surface2, border: `1px solid ${colors.border2}`, borderRadius: 3, color: colors.text }}
+        />
+        {error && <div style={{ fontSize: 9, color: colors.red }}>{error}</div>}
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={handleReject} disabled={submitting} style={{ fontSize: 9, padding: "3px 8px", background: colors.red, color: colors.bg, border: "none", borderRadius: 3, cursor: "pointer" }}>
+            {submitting ? "Rejecting…" : "Confirm Reject"}
+          </button>
+          <button onClick={() => setMode(null)} disabled={submitting} style={{ fontSize: 9, padding: "3px 8px", background: "transparent", color: colors.muted, border: `1px solid ${colors.border2}`, borderRadius: 3, cursor: "pointer" }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      <button onClick={() => setMode("pay")} style={{ fontSize: 9, padding: "3px 8px", background: colors.green, color: colors.bg, border: "none", borderRadius: 3, cursor: "pointer" }}>
+        Mark Paid
+      </button>
+      <button onClick={() => setMode("reject")} style={{ fontSize: 9, padding: "3px 8px", background: "transparent", color: colors.red, border: `1px solid ${colors.red}`, borderRadius: 3, cursor: "pointer" }}>
+        Reject
+      </button>
+    </div>
+  );
+}
+
+function WithdrawalsSection() {
+  const { data, loading, error, refetch } = useApi(() => adminApi.withdrawals(), []);
+  const rows = data || [];
+
+  if (loading) return <div style={{ padding: 24 }}><LoadingState rows={4}/></div>;
+  if (error) return <ErrorState error={error} onRetry={refetch}/>;
+
+  return (
+    <div>
+      <SectionHeader title="Withdrawals" count={rows.length} onRefresh={refetch} />
+      {rows.length === 0 && <EmptyState message="No withdrawal requests"/>}
+      {rows.length > 0 && (
+        <div style={{ ...cardStyle, padding: 0, overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={th}>Requested</th><th style={th}>Requester</th><th style={th}>Workspace</th>
+                <th style={th}>Amount</th><th style={th}>Destination</th><th style={th}>Status</th><th style={th}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((w) => (
+                <tr key={w.id}>
+                  <td style={td}>{fmt.ago(w.requestedAt)}</td>
+                  <td style={td}>{w.requester?.email || "—"}</td>
+                  <td style={td}>{w.workspace?.name || "—"}</td>
+                  <td style={td}>{fmt.usd(w.amount)}</td>
+                  <td style={{ ...td, maxWidth: 140, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={w.destinationAddress}>
+                    {w.destinationAddress}
+                  </td>
+                  <td style={{ ...td, color: WITHDRAWAL_STATUS_COLOR[w.status] || colors.text }}>{w.status}</td>
+                  <td style={td}><WithdrawalActions withdrawal={w} onDone={refetch} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Audit Log ────────────────────────────────────────────────────────────────
 
 function AuditLogSection() {
@@ -643,6 +783,7 @@ export default function AdminOperations() {
       {tab === "settlements" && <StuckSettlementsSection />}
       {tab === "notifications" && <NotificationFailuresSection />}
       {tab === "wallets" && <WalletsSection />}
+      {tab === "withdrawals" && <WithdrawalsSection />}
       {tab === "audit" && <AuditLogSection />}
     </div>
   );

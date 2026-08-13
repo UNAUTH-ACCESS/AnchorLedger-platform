@@ -135,4 +135,13 @@ export const admin = {
   auditEvents:       (params) => client.get("/audit/admin/events", { params }),
   platformAuditEvents: (params) => client.get("/audit/admin/platform-events", { params }),
   clients: () => client.get("/admin/clients"),
+  withdrawals: () => client.get("/admin/withdrawals"),
+  markWithdrawalPaid: (id, payoutTxHash) => client.post(`/admin/withdrawals/${id}/mark-paid`, { payoutTxHash }),
+  rejectWithdrawal: (id, reason) => client.post(`/admin/withdrawals/${id}/reject`, { reason }),
+};
+
+export const withdrawals = {
+  get: (portfolioId) => client.get("/withdrawals", { params: { portfolioId } }),
+  request: (portfolioId, amount, destinationAddress) =>
+    client.post("/withdrawals", { portfolioId, amount, destinationAddress }),
 };

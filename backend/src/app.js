@@ -45,6 +45,8 @@ const onboardingRoutes     = require("./api/v1/onboarding/onboarding.routes");
 const kycRoutes             = require("./api/v1/kyc/kyc.routes");
 const adminSystemRoutes     = require("./api/v1/admin/system.routes");
 const adminClientsRoutes    = require("./api/v1/admin/clients.routes");
+const withdrawalRoutes      = require("./api/v1/withdrawals/withdrawals.routes");
+const adminWithdrawalRoutes = require("./api/v1/admin/withdrawals.routes");
 const { runWeeklySummaries } = require("./services/lifecycle.service");
 
 const app = express();
@@ -92,6 +94,8 @@ app.use("/api/v1/chains",        require("./api/v1/chains/chains.routes"));
 app.use("/api/v1/kyc",          kycRoutes);
 app.use("/api/v1/admin",        adminSystemRoutes);
 app.use("/api/v1/admin",        adminClientsRoutes);
+app.use("/api/v1/withdrawals",  withdrawalRoutes);
+app.use("/api/v1/admin",        adminWithdrawalRoutes);
 app.use("/unsubscribe",          marketingRoutes);
 
 // ── Error handling ────────────────────────────────────────────────────────────
