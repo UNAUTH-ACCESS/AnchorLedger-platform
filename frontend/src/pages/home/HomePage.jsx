@@ -97,13 +97,53 @@ function PermissionDiagram() {
   );
 }
 
-function ChainStatus({ label, state }) {
-  const active = state === "active";
+function ExecutionFlowDiagram() {
+  const line = { display: "flex", justifyContent: "space-between", gap: 16, padding: "6px 0" };
+  const key = { color: colors.muted };
+  const val = { color: colors.text };
+  return (
+    <div style={{
+      background: colors.surface, border: `1px solid ${colors.border2}`,
+      borderRadius: 6, padding: "20px 24px",
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5,
+      boxShadow: "0 0 0 1px rgba(0,212,170,0.04)",
+    }}>
+      <div style={{ color: colors.text, fontWeight: 700, letterSpacing: "0.04em", marginBottom: 4 }}>
+        EXECUTION FLOW
+      </div>
+      <div style={line}><span style={key}>├─ Signal:</span><span style={val}>generated from live market data</span></div>
+      <div style={line}><span style={key}>├─ Evaluation:</span><span style={val}>checked against your risk settings</span></div>
+      <div style={line}><span style={key}>├─ Proposal:</span><span style={val}>created, logged, timestamped</span></div>
+      <div style={line}><span style={key}>├─ Execution:</span><span style={val}>trade fires within your approved cap</span></div>
+      <div style={line}><span style={key}>└─ Settlement:</span><span style={val}>funds ± result returned to your wallet</span></div>
+    </div>
+  );
+}
+
+function SecurityItem({ children }) {
+  return (
+    <li style={{ fontSize: 13, color: colors.muted, lineHeight: 1.7, marginBottom: 10 }}>
+      {children}
+    </li>
+  );
+}
+
+function FAQItem({ question, answer }) {
+  return (
+    <FadeUp style={{ marginBottom: 28 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{question}</h3>
+      <p style={{ fontSize: 13, color: colors.muted, lineHeight: 1.7, margin: 0 }}>{answer}</p>
+    </FadeUp>
+  );
+}
+
+function ChainStatus({ label, dot, statusLabel }) {
+  const filled = dot === "filled";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
-      <span style={{ color: active ? colors.green : colors.muted }}>{active ? "●" : "○"}</span>
+      <span style={{ color: filled ? colors.green : colors.muted }}>{filled ? "●" : "○"}</span>
       <span style={{ color: colors.text }}>{label}</span>
-      <span style={{ color: colors.muted }}>{active ? "In progress" : "Planned"}</span>
+      <span style={{ color: colors.muted }}>{statusLabel}</span>
     </div>
   );
 }
@@ -196,24 +236,132 @@ export default function HomePage() {
 
       <div style={{ borderTop: `1px solid ${colors.border}` }} />
 
-      {/* ── Chain status ───────────────────────────────────────────────── */}
+      {/* ── A. What happens after you approve ─────────────────────────── */}
       <div style={{ ...wrap, padding: "56px 20px" }}>
         <FadeUp>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Built in stages, headed to mainnet</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>What happens after you approve</h2>
           <p style={{ fontSize: 13, color: colors.muted, lineHeight: 1.7, marginBottom: 24, maxWidth: 560 }}>
-            Anchor Ledger is in active development. Live execution is rolling out chain by chain
-            as we move toward full mainnet launch — each piece is built, tested, and verified
-            before it goes live for real funds.
+            Once you've granted permission, here's exactly what happens:
+          </p>
+          <ExecutionFlowDiagram />
+          <div style={{ fontSize: 11, color: colors.muted, marginTop: 12, fontStyle: "italic" }}>
+            Every step is logged. Every proposal, execution, and settlement is tied to your account
+            and visible in your history — nothing happens off the record.
+          </div>
+        </FadeUp>
+      </div>
+
+      <div style={{ borderTop: `1px solid ${colors.border}` }} />
+
+      {/* ── B. Security & architecture ────────────────────────────────── */}
+      <div style={{ ...wrap, padding: "56px 20px" }}>
+        <FadeUp>
+          <Eyebrow>Built on specifics, not promises</Eyebrow>
+          <ul style={{ margin: 0, padding: "0 0 0 18px" }}>
+            <SecurityItem>
+              <strong style={{ color: colors.text }}>Non-custodial by design</strong> — Anchor Ledger never
+              holds a standing balance of your funds. Capital only ever moves within your approved
+              cap, for the duration of an active trade, and returns to your wallet at settlement —
+              visible in your history the whole way.
+            </SecurityItem>
+            <SecurityItem>
+              <strong style={{ color: colors.text }}>Identity verification documents encrypted at rest</strong> —
+              not stored in the clear, ever
+            </SecurityItem>
+            <SecurityItem>
+              <strong style={{ color: colors.text }}>Two-factor authentication available</strong> —
+              standard TOTP, works with any authenticator app
+            </SecurityItem>
+            <SecurityItem>
+              <strong style={{ color: colors.text }}>Known-device tracking</strong> — new devices logging
+              into your account are recorded and visible to you
+            </SecurityItem>
+            <SecurityItem>
+              <strong style={{ color: colors.text }}>Full audit trail</strong> — every account action, every
+              review, every decision is logged and timestamped
+            </SecurityItem>
+          </ul>
+          <div style={{ fontSize: 11, color: colors.muted, marginTop: 8, fontStyle: "italic" }}>
+            No shield icons. No "bank-grade" claims. Just what's actually true.
+          </div>
+        </FadeUp>
+      </div>
+
+      <div style={{ borderTop: `1px solid ${colors.border}` }} />
+
+      {/* ── C. FAQ ─────────────────────────────────────────────────────── */}
+      <div style={{ ...wrap, padding: "56px 20px" }}>
+        <FadeUp style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700 }}>FAQ</h2>
+        </FadeUp>
+
+        <FAQItem
+          question="Which chains are supported?"
+          answer="Solana is live today. Ethereum and Tron support is being rolled out in stages — see the roadmap below."
+        />
+        <FAQItem
+          question="What does identity verification actually involve?"
+          answer="A real review, not a checkbox: your legal name, a government ID, and a selfie, checked by an actual reviewer before certain features unlock."
+        />
+        <FAQItem
+          question="Is there a minimum deposit?"
+          answer="Yes — $500 USDC."
+        />
+        <FAQItem
+          question="How do I withdraw funds?"
+          answer="You submit a request, it's reviewed, and the payout is sent on-chain — with the transaction verified before your request is marked complete. Nothing is automated blindly; every withdrawal has a real, checkable transaction behind it."
+        />
+        <FAQItem
+          question="What if I change my mind?"
+          answer="Revoke your permission at any time. It's an on-chain transaction you sign yourself — once it confirms, Anchor Ledger's authority over your wallet ends immediately."
+        />
+      </div>
+
+      <div style={{ borderTop: `1px solid ${colors.border}` }} />
+
+      {/* ── D. Roadmap ─────────────────────────────────────────────────── */}
+      <div style={{ ...wrap, padding: "56px 20px" }}>
+        <FadeUp>
+          <Eyebrow>Built in stages, headed to mainnet</Eyebrow>
+          <p style={{ fontSize: 13, color: colors.muted, lineHeight: 1.7, marginBottom: 24, maxWidth: 560 }}>
+            Anchor Ledger is being built the way infrastructure should be: one verified piece at a
+            time. Live execution exists today so the surrounding system — signals, risk evaluation,
+            settlement, custody-free permissions — are proven correct before real orders start
+            hitting real exchanges. Each chain moves to live execution only once it's tested and
+            verified, not on a promise.
           </p>
           <div style={{
             display: "flex", flexWrap: "wrap", gap: "10px 28px",
             background: colors.surface, border: `1px solid ${colors.border2}`,
             borderRadius: 6, padding: "16px 20px",
           }}>
-            <ChainStatus label="Solana" state="active" />
-            <ChainStatus label="Ethereum" state="planned" />
-            <ChainStatus label="Tron" state="planned" />
+            <ChainStatus label="Solana" dot="filled" statusLabel="Live" />
+            <ChainStatus label="Ethereum" dot="hollow" statusLabel="Planned" />
+            <ChainStatus label="Tron" dot="hollow" statusLabel="Live" />
           </div>
+          <div style={{ fontSize: 11, color: colors.muted, marginTop: 12, fontStyle: "italic" }}>
+            As each chain goes live, this page updates — you'll always know exactly where things stand.
+          </div>
+        </FadeUp>
+      </div>
+
+      <div style={{ borderTop: `1px solid ${colors.border}` }} />
+
+      {/* ── E. Closing CTA ─────────────────────────────────────────────── */}
+      <div style={{ ...wrap, padding: "64px 20px", textAlign: "center" }}>
+        <FadeUp>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>
+            Ready to see it for yourself?
+          </h2>
+          <Link to="/subscribe" style={{ textDecoration: "none" }}>
+            <button style={{
+              background: colors.green, color: colors.bg, border: "none", borderRadius: 4,
+              padding: "14px 28px", fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 700, letterSpacing: "0.05em", cursor: "pointer",
+            }}>
+              Get Early Access
+            </button>
+          </Link>
         </FadeUp>
       </div>
 
