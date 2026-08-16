@@ -105,24 +105,12 @@ services:
     networks:
       - internal
 
-
-  delegate:
-    image: node:20-alpine
-    container_name: anchorledger_delegate
-    restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - /home/solana/quantedge-delegate:/app
-    command: node server/delegate-server.js
-    ports:
-      - '3001:3001'
-    environment:
-      NODE_ENV: production
-      DELEGATE_SERVER_PORT: 3001
-    env_file:
-      - /home/solana/quantedge-delegate/.env
-    networks:
-      - internal
+  # No 'delegate' service here on purpose. delegate-server.js runs on the
+  # HOST under PM2 (see scripts/delegate-watchdog.sh) - the api/worker
+  # containers reach it at host.docker.internal:3001. A containerized
+  # version used to be defined here but was never actually used, and
+  # port-conflicted with the real one on a bare `docker compose up -d`
+  # (both tried to bind :3001). Removed rather than left as a footgun.
 
   frontend:
     build:

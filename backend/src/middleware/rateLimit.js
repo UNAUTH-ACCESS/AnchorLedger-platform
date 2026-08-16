@@ -61,4 +61,18 @@ const forgotPasswordLimiter = rateLimit({
   message: { success: false, error: { message: "Too many requests. Try again later.", code: "RATE_LIMITED" } },
 });
 
-module.exports = { loginLimiter, twoFactorLimiter, kycSubmitLimiter, forgotPasswordLimiter };
+// Register: creates a real account + workspace, hashes the password with
+// bcrypt cost 12 (deliberately expensive), and sends real email via Resend
+// (welcome + verification) - all real cost per request, on an endpoint
+// that's now linked directly from the public homepage. 5 per hour per IP
+// covers a shared/NAT IP creating a few legitimate accounts while blocking
+// automated signup spam or a Resend-quota exhaustion attempt.
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: "Too many accounts created from this address. Try again later.", code: "RATE_LIMITED" } },
+});
+
+module.exports = { loginLimiter, twoFactorLimiter, kycSubmitLimiter, forgotPasswordLimiter, registerLimiter };

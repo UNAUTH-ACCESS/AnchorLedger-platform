@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const { loginLimiter, twoFactorLimiter, forgotPasswordLimiter } = require("../../../middleware/rateLimit");
+const { loginLimiter, twoFactorLimiter, forgotPasswordLimiter, registerLimiter } = require("../../../middleware/rateLimit");
 const { signAccessToken, verifyAccessToken, signRefreshToken, verifyRefreshToken } = require("../../../lib/jwt");
 const crypto = require("crypto");
 const { generateSecret, generate, verify, generateURI } = require("otplib");
@@ -126,7 +126,7 @@ function clearRefreshCookie(res) {
 }
 
 // POST /auth/register
-router.post("/register", [
+router.post("/register", registerLimiter, [
   body("email").isEmail().normalizeEmail(),
   body("password").isLength({ min: 8 }),
   body("name").trim().isLength({ min: 1 }),
