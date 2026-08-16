@@ -36,7 +36,11 @@ async function subscribe(email, name = null, source = "website", metadata = {}) 
         data:  { status: "SUBSCRIBED", unsubscribedAt: null, subscribedAt: new Date() },
       });
       logger.info("[marketing] Re-subscribed", { email });
-      await sendWelcomeEmail(updated);
+      // The subscription itself is the thing the visitor is waiting on - a
+      // welcome-email delivery failure (e.g. Resend rejecting the recipient)
+      // must not turn a successful signup into a 500 for them.
+      sendWelcomeEmail(updated).catch(err =>
+        logger.warn("[marketing] Welcome email failed to send", { email, error: err.message }));
       return { status: "resubscribed", subscriber: updated };
     }
 
@@ -45,7 +49,8 @@ async function subscribe(email, name = null, source = "website", metadata = {}) 
     });
 
     logger.info("[marketing] New subscriber", { email, source });
-    await sendWelcomeEmail(subscriber);
+    sendWelcomeEmail(subscriber).catch(err =>
+      logger.warn("[marketing] Welcome email failed to send", { email, error: err.message }));
     return { status: "subscribed", subscriber };
 
   } catch (err) {
