@@ -173,7 +173,7 @@ export default function HomePage() {
             Not custody. Not a deposit. A scoped, revocable authority — visible on-chain,
             limited to an amount you set, gone the moment you say so.
           </p>
-          <Link to="/subscribe" style={{ textDecoration: "none" }}>
+          <Link to="/signup" style={{ textDecoration: "none" }}>
             <button style={{
               background: colors.green, color: colors.bg, border: "none", borderRadius: 4,
               padding: "14px 28px", fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
@@ -353,7 +353,7 @@ export default function HomePage() {
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>
             Ready to see it for yourself?
           </h2>
-          <Link to="/subscribe" style={{ textDecoration: "none" }}>
+          <Link to="/signup" style={{ textDecoration: "none" }}>
             <button style={{
               background: colors.green, color: colors.bg, border: "none", borderRadius: 4,
               padding: "14px 28px", fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
