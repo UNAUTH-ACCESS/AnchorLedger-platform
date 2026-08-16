@@ -38,6 +38,16 @@ router.get("/system/health", authenticate, requirePlatformAdmin, requirePlatform
   } catch (err) { next(err); }
 });
 
+// GET /admin/vault-reconciliation — live check on demand, not just the
+// periodic background log line (see workers/vaultReconciliation.job.js).
+router.get("/vault-reconciliation", authenticate, requirePlatformAdmin, requirePlatformPermission("view_all"), async (req, res, next) => {
+  try {
+    const { checkVaultReconciliation } = require("../../../workers/vaultReconciliation.job");
+    const result = await checkVaultReconciliation();
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+});
+
 // POST /admin/system/restart-delegate — real production action, explicit
 // confirm required client-side, logged to PlatformAuditEvent (no workspace
 // context for a platform-level infra action).

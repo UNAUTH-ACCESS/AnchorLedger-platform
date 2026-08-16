@@ -30,12 +30,14 @@ const { autoSignPendingProposals } = require("../services/autosign.service");
 const { sendDrawdownAlert }     = require("../services/lifecycle.service");
 const { watchForDeposits }      = require("../services/depositWatcher.service");
 const { reconcileStuckSettlements } = require("./settlementReconciliation.job");
+const { checkVaultReconciliation }  = require("./vaultReconciliation.job");
 
 const SIGNAL_INTERVAL   = parseInt(process.env.SIGNAL_INTERVAL_MS    || "60000");
 const MARKET_INTERVAL   = parseInt(process.env.MARKET_FEED_INTERVAL_MS || "30000");
 const SNAPSHOT_INTERVAL = parseInt(process.env.SNAPSHOT_INTERVAL_MS   || "300000");
 const REGIME_INTERVAL   = 30 * 60 * 1000;
 const DEPOSIT_INTERVAL  = parseInt(process.env.DEPOSIT_INTERVAL_MS || "60000");
+const VAULT_RECONCILIATION_INTERVAL = parseInt(process.env.VAULT_RECONCILIATION_INTERVAL_MS || "1800000"); // 30 min
 
 // Position TTL — close if open longer than this (default 4 hours)
 const POSITION_TTL_MS   = parseInt(process.env.POSITION_TTL_MS || "14400000");
@@ -353,6 +355,9 @@ async function main() {
   setInterval(() => reconcileStuckSettlements().catch(err =>
     logger.error("[worker] Settlement reconciliation error", { error: err.message })
   ), 2 * 60 * 1000);
+  setInterval(() => checkVaultReconciliation().catch(err =>
+    logger.error("[worker] Vault reconciliation error", { error: err.message })
+  ), VAULT_RECONCILIATION_INTERVAL);
 
   logger.info("[worker] Autonomous cycle running");
 }

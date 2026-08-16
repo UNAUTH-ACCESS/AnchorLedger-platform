@@ -141,6 +141,54 @@ function RestartDelegateButton({ onRestarted }) {
   );
 }
 
+function VaultReconciliationCard() {
+  const { data, loading, error, refetch } = useApi(() => adminApi.vaultReconciliation(), []);
+
+  return (
+    <div style={cardStyle}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: 600 }}>Vault reconciliation</div>
+        <button onClick={refetch} style={{ ...refreshBtn, marginLeft: 0, padding: "2px 8px" }}>↻</button>
+      </div>
+      {loading && <div style={{ fontSize: 10, color: colors.muted }}>Checking on-chain balance…</div>}
+      {error && <div style={{ fontSize: 10, color: colors.red }}>{error.message || "Check failed"}</div>}
+      {data && (
+        <>
+          <div style={{
+            fontSize: 12, fontWeight: 700, marginBottom: 10,
+            color: data.error ? colors.red : (data.ok ? colors.green : colors.red),
+          }}>
+            {data.error ? "⚠ Could not read on-chain balance" : (data.ok ? "✓ Matches" : "⚠ MISMATCH")}
+          </div>
+          {data.error && <div style={{ fontSize: 10, color: colors.red, marginBottom: 8 }}>{data.error}</div>}
+          <div style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: colors.muted }}>Deposited (COMPLETE)</span><span>{fmt.usd(data.totalDeposited)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: colors.muted }}>Withdrawn (PAID)</span><span>{fmt.usd(data.totalWithdrawn)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: colors.muted }}>Expected vault balance</span><span>{fmt.usd(data.expectedVaultBalance)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: colors.muted }}>Actual on-chain balance</span>
+              <span>{data.actualVaultBalance != null ? fmt.usd(data.actualVaultBalance) : "—"}</span>
+            </div>
+            {data.discrepancy != null && (
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${colors.border}`, paddingTop: 4, marginTop: 2 }}>
+                <span style={{ color: colors.muted }}>Discrepancy</span>
+                <span style={{ color: Math.abs(data.discrepancy) > 0.01 ? colors.red : colors.green }}>{fmt.usd(data.discrepancy)}</span>
+              </div>
+            )}
+          </div>
+          <div style={{ fontSize: 9, color: colors.muted, marginTop: 8 }}>As of {fmt.ts(data.checkedAt)} — also runs automatically every 30 min</div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function SystemHealthSection() {
   const { data, loading, error, refetch } = useApi(() => adminApi.systemHealth(), []);
 
@@ -203,6 +251,8 @@ function SystemHealthSection() {
           </tbody>
         </table>
       </div>
+
+      <VaultReconciliationCard />
     </div>
   );
 }

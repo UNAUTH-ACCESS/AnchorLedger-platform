@@ -182,6 +182,17 @@ const DelegateService = {
   async verifyPayout(signature, expectedAmountUSDC, expectedDestination) {
     const data = await delegatePost("/verify-payout", { signature, expectedAmountUSDC, expectedDestination });
     return { verified: data.verified, reason: data.reason, details: data.details };
+  },
+
+  // Real on-chain USDC balance of SOLANA_DEPOSIT_VAULT - used by
+  // vaultReconciliation.job.js to catch drift between what the ledger
+  // thinks clients are owed and what's actually sitting in the vault,
+  // before a client does.
+  async getVaultUsdcBalance() {
+    const vaultAddress = process.env.SOLANA_DEPOSIT_VAULT;
+    if (!vaultAddress) throw new Error("SOLANA_DEPOSIT_VAULT not configured");
+    const data = await delegatePost("/usdc-balance", { address: vaultAddress });
+    return parseFloat(data.balance);
   }
 };
 

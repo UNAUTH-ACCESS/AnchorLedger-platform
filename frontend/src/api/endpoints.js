@@ -128,6 +128,7 @@ export const kyc = {
 // security boundary)
 export const admin = {
   systemHealth:      () => client.get("/admin/system/health"),
+  vaultReconciliation: () => client.get("/admin/vault-reconciliation"),
   restartDelegate:   () => client.post("/admin/system/restart-delegate"),
   stuckSettlements:  () => client.get("/positions/admin/settlement-issues"),
   deliveryFailures:  (params) => client.get("/notifications/admin/delivery-failures", { params }),
