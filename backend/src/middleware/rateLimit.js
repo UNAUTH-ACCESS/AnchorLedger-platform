@@ -75,4 +75,18 @@ const registerLimiter = rateLimit({
   message: { success: false, error: { message: "Too many accounts created from this address. Try again later.", code: "RATE_LIMITED" } },
 });
 
-module.exports = { loginLimiter, twoFactorLimiter, kycSubmitLimiter, forgotPasswordLimiter, registerLimiter };
+// Withdrawal requests: each one is individually balance-safe (the
+// transactional check in withdrawals.routes.js can't be bypassed by
+// spamming), but nothing stopped a user from creating many PENDING rows
+// in a row and flooding the admin review queue. 10 per hour per IP is
+// well above any legitimate use (a real person requests a withdrawal
+// occasionally, not repeatedly) while blocking that.
+const withdrawalLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: "Too many withdrawal requests. Try again later.", code: "RATE_LIMITED" } },
+});
+
+module.exports = { loginLimiter, twoFactorLimiter, kycSubmitLimiter, forgotPasswordLimiter, registerLimiter, withdrawalLimiter };

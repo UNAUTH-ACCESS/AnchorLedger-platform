@@ -15,6 +15,7 @@ const { authenticate, requireWorkspace } = require("../../../middleware/auth");
 const { assertPortfolioAccess } = require("../../../middleware/ownership");
 const { AppError } = require("../../../middleware/error");
 const { creditPendingDeposits } = require("../../../services/position.service");
+const { withdrawalLimiter } = require("../../../middleware/rateLimit");
 
 const router = express.Router();
 
@@ -55,7 +56,7 @@ router.get("/", authenticate, requireWorkspace, async (req, res, next) => {
 });
 
 // POST /withdrawals — { portfolioId, amount, destinationAddress }
-router.post("/", authenticate, requireWorkspace, async (req, res, next) => {
+router.post("/", withdrawalLimiter, authenticate, requireWorkspace, async (req, res, next) => {
   try {
     const { portfolioId, amount, destinationAddress } = req.body || {};
 

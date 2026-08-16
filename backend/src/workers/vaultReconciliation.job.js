@@ -24,6 +24,71 @@ const DelegateService = require("../lib/delegate/delegate.service");
 
 const TOLERANCE_USDC = 0.01; // rounding-only slack, not a real allowance
 
+// delegate-watchdog.sh's alert address (appointments.douglaseze@gmail.com)
+// would be the natural default here too - one operational alert inbox,
+// not a second one to remember to check - but Resend's account is still
+// in sandbox mode (no verified domain), which only allows delivery to the
+// account owner's own address. Verified live: sending to the watchdog's
+// address gets a 403 from Resend - meaning delegate-watchdog.sh's own
+// alerts have almost certainly never actually delivered either, this
+// entire session. Using the address that can actually receive mail right
+// now; revisit both once a domain is verified in Resend.
+const ALERT_EMAIL = process.env.RECONCILIATION_ALERT_EMAIL || "iheartefe@gmail.com";
+
+async function sendMismatchAlert(result) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    logger.error("[vaultReconciliation] Cannot send alert email - RESEND_API_KEY not configured");
+    return;
+  }
+  const fromAddress = process.env.FROM_EMAIL || "Anchor Ledger <onboarding@resend.dev>";
+
+  const body = result.error
+    ? `Could not read the vault's on-chain balance: ${result.error}\n\nChecked at ${result.checkedAt}.`
+    : `Internal ledger and on-chain vault balance disagree.\n\n` +
+      `Total deposited (COMPLETE):  $${result.totalDeposited}\n` +
+      `Total withdrawn (PAID):      $${result.totalWithdrawn}\n` +
+      `Expected vault balance:      $${result.expectedVaultBalance}\n` +
+      `Actual on-chain balance:     $${result.actualVaultBalance}\n` +
+      `Discrepancy:                 $${result.discrepancy}\n\n` +
+      `Checked at ${result.checkedAt}. See Admin -> Operations -> System Health for live detail.`;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [ALERT_EMAIL],
+        subject: `[Anchor Ledger] Vault reconciliation ${result.error ? "check failed" : "MISMATCH"}`,
+        text: body,
+      }),
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      logger.error("[vaultReconciliation] Alert email failed to send", { status: res.status, body: errBody });
+      return;
+    }
+    logger.info("[vaultReconciliation] Alert email sent", { to: ALERT_EMAIL });
+  } catch (err) {
+    logger.error("[vaultReconciliation] Alert email failed to send", { error: err.message });
+  }
+}
+
+// In-memory only (resets on restart, acceptable for a first pass) - avoids
+// re-sending the identical alert every 30 minutes forever for one ongoing,
+// already-known issue, while still re-alerting immediately if the specific
+// problem changes, and reminding periodically so it can't be silently
+// ignored indefinitely either.
+const REMINDER_INTERVAL_MS = 12 * 60 * 60 * 1000;
+let lastAlert = { discrepancy: undefined, error: undefined, alertedAt: 0 };
+
+function shouldAlert(result) {
+  const changed = result.error !== lastAlert.error || result.discrepancy !== lastAlert.discrepancy;
+  const dueForReminder = Date.now() - lastAlert.alertedAt > REMINDER_INTERVAL_MS;
+  return changed || dueForReminder;
+}
+
 async function checkVaultReconciliation() {
   const [depositAgg, withdrawalAgg] = await Promise.all([
     prisma.deposit.aggregate({ where: { status: "COMPLETE" }, _sum: { depositAmount: true } }),
@@ -62,6 +127,11 @@ async function checkVaultReconciliation() {
     logger.error("[vaultReconciliation] MISMATCH between internal ledger and real vault balance", result);
   } else {
     logger.info("[vaultReconciliation] OK", result);
+  }
+
+  if (!ok && shouldAlert(result)) {
+    lastAlert = { discrepancy, error, alertedAt: Date.now() };
+    await sendMismatchAlert(result);
   }
 
   return result;
