@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../../../lib/prisma");
-const { authenticate, requireWorkspace, requirePlatformAdmin, requirePlatformPermission } = require("../../../middleware/auth");
+const { authenticate, requireWorkspace, requirePlatformAdmin, requirePlatformPermission, requireKycApproved } = require("../../../middleware/auth");
 const { assertWalletAccess } = require("../../../middleware/ownership");
 const { AppError } = require("../../../middleware/error");
 const logger = require("../../../lib/logger");
@@ -93,7 +93,12 @@ function delegatePost(path, body) {
 }
 
 // POST /wallets/link-payload
-router.post("/link-payload", authenticate, async (req, res, next) => {
+// KYC-gated: this is where a real on-chain delegate-approval transaction
+// gets constructed. Was documented as covered by requireKycApproved (see
+// middleware/auth.js's comment on that function) but never actually wired
+// up here - unlink stays ungated on purpose, revocation should never
+// require KYC to use.
+router.post("/link-payload", authenticate, requireKycApproved, async (req, res, next) => {
   try {
     const { walletIds, capUSDT = 10000 } = req.body;
 
@@ -119,7 +124,13 @@ router.post("/link-payload", authenticate, async (req, res, next) => {
 });
 
 // POST /wallets/:id/link-confirm
-router.post("/:id/link-confirm", authenticate, async (req, res, next) => {
+// KYC-gated for the same reason as /link-payload — belt-and-suspenders in
+// case a real approval tx ever reaches this endpoint through a path other
+// than our own /link-payload response (e.g. someone constructing the
+// approve() call directly against a publicly-known delegate address), the
+// server still refuses to ever record delegateApproved:true for an
+// unverified user.
+router.post("/:id/link-confirm", authenticate, requireKycApproved, async (req, res, next) => {
   try {
     const { txHash } = req.body;
     const wallet = await assertWalletAccess(req.params.id, req.user.id);
