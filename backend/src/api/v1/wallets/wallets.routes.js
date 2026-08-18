@@ -172,6 +172,70 @@ router.post("/:id/link-confirm", authenticate, requireKycApproved, async (req, r
   } catch (err) { next(err); }
 });
 
+// POST /wallets/deposit-approval-payload
+// Body: { walletId, capUSDC }
+// KYC-gated, same reasoning as /link-payload. This is a SEPARATE
+// authorization from the trading approval /link-payload builds - deposit-
+// sweep permission (mainnet, real USDC, capped in USDC) is a different
+// grant to a different purpose than trading permission (devnet, MockUSDT,
+// capped in USDT), even though both currently end up delegating to the
+// same delegate address. Solana-only: USDC deposits only ever arrive on
+// Solana in this system (see depositWatcher.service.js's file header).
+router.post("/deposit-approval-payload", authenticate, requireKycApproved, async (req, res, next) => {
+  try {
+    const { walletId, capUSDC = 100000 } = req.body;
+    const wallet = await assertWalletAccess(walletId, req.user.id);
+    const walletWithChain = await prisma.wallet.findUnique({ where: { id: wallet.id }, include: { chain: true } });
+    if (walletWithChain.chain?.type !== "SOLANA") {
+      throw new AppError("Deposit approval is only supported for Solana wallets", 400, "VALIDATION_ERROR");
+    }
+    const result = await delegatePost("/usdc-deposit-approval-payload", { capUSDC });
+    res.json({ success: true, data: { payload: result.payload } });
+  } catch (err) { next(err); }
+});
+
+// POST /wallets/:id/deposit-approval-confirm
+// Body: { txHash }
+// The deposit-sweep counterpart to /link-confirm. Verifies against
+// /usdc-deposit-status (the mainnet USDC delegate allowance) rather than
+// /status (the devnet trading delegate allowance) - checking the wrong one
+// here would mean a real deposit-approval transaction could never actually
+// be confirmed, since the devnet trading executor knows nothing about it.
+router.post("/:id/deposit-approval-confirm", authenticate, requireKycApproved, async (req, res, next) => {
+  try {
+    const { txHash } = req.body;
+    const wallet = await assertWalletAccess(req.params.id, req.user.id);
+    const walletWithChain = await prisma.wallet.findUnique({ where: { id: req.params.id }, include: { chain: true } });
+    if (walletWithChain.chain?.type !== "SOLANA") {
+      throw new AppError("Deposit approval is only supported for Solana wallets", 400, "VALIDATION_ERROR");
+    }
+
+    const statusRes = await delegatePost("/usdc-deposit-status", { address: wallet.address });
+    const allowanceValue = Number(statusRes.allowance);
+    if (!Number.isFinite(allowanceValue) || allowanceValue <= 0) {
+      throw new AppError(
+        "On-chain USDC deposit allowance not found or zero — approval transaction not yet confirmed",
+        400, "DELEGATE_NOT_APPROVED"
+      );
+    }
+
+    await prisma.wallet.update({
+      where: { id: wallet.id },
+      data: { delegateApproved: true, delegateChain: "SPL", linkTxHash: txHash, verifiedAt: new Date() },
+    });
+
+    const portfolio = await prisma.portfolio.findFirst({ where: { workspaceId: wallet.workspaceId } });
+    if (portfolio) {
+      await prisma.portfolioWallet.upsert({
+        where: { portfolioId_walletId: { portfolioId: portfolio.id, walletId: wallet.id } },
+        create: { portfolioId: portfolio.id, walletId: wallet.id },
+        update: {},
+      });
+    }
+    res.json({ success: true, data: { linked: true } });
+  } catch (err) { next(err); }
+});
+
 // POST /wallets/submit-signed-transaction
 // Body: { transaction: base64 signed tx } — from the Phantom deep-link
 // signTransaction flow. signAndSendTransaction (deep link) is deprecated by
