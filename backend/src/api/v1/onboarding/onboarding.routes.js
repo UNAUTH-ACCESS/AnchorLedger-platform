@@ -39,19 +39,35 @@ router.post("/stage/:n", authenticate, requireWorkspace, async (req, res, next) 
 
     const settings = { ...(req.workspace.settings || {}), onboarding: updated };
 
-    // If Stage 8 — apply capital allocation to portfolio riskConfig
+    // Stage 8 — Capital Allocation. This is the step where a workspace's
+    // trading portfolio actually comes into existence: nothing else in the
+    // app ever creates one (verified - there is no other prisma.portfolio.create
+    // call anywhere), so without this, deposit-watching and trading stay
+    // permanently unreachable for a workspace no matter how far onboarding
+    // otherwise progresses, since both require a portfolio to attach to.
     if (stage === 8 && req.body.stopLossPct) {
-      const portfolio = await prisma.portfolio.findFirst({ where: { workspaceId } });
-      if (portfolio?.riskConfig?.id) {
-        await prisma.riskConfig.update({
-          where: { id: portfolio.riskConfig.id },
+      const riskFields = {
+        stopLossPct:             req.body.stopLossPct             ?? undefined,
+        maxDrawdownPct:          req.body.maxDrawdownPct          ?? undefined,
+        maxPositionPct:          req.body.maxPositionPct          ?? undefined,
+        signalStrengthThreshold: req.body.signalStrengthThreshold ?? undefined,
+      };
+
+      const portfolio = await prisma.portfolio.findFirst({ where: { workspaceId }, include: { riskConfig: true } });
+
+      if (!portfolio) {
+        await prisma.portfolio.create({
           data: {
-            stopLossPct:          req.body.stopLossPct          ?? undefined,
-            maxDrawdownPct:       req.body.maxDrawdownPct       ?? undefined,
-            maxPositionPct:       req.body.maxPositionPct       ?? undefined,
-            signalStrengthThreshold: req.body.signalStrengthThreshold ?? undefined,
+            workspaceId,
+            name: "Main Portfolio",
+            riskConfig: { create: riskFields },
+            snapshots:  { create: { nav: 0, cash: 0, invested: 0, unrealizedPnl: 0, realizedPnl: 0 } },
           },
         });
+      } else if (portfolio.riskConfig?.id) {
+        await prisma.riskConfig.update({ where: { id: portfolio.riskConfig.id }, data: riskFields });
+      } else {
+        await prisma.riskConfig.create({ data: { portfolioId: portfolio.id, ...riskFields } });
       }
     }
 
