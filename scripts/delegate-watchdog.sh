@@ -24,10 +24,7 @@ log() {
 }
 
 RESEND_API_KEY=$(grep -E '^RESEND_API_KEY=' "$ENV_FILE" | head -1 | cut -d'=' -f2-)
-# The custom domain in .env's FROM_EMAIL (anchorledger.exchange) isn't verified
-# in Resend yet, so sending from it 403s unconditionally. Fall back to
-# Resend's always-available sender until the domain is verified.
-FROM_EMAIL="Anchor Ledger <onboarding@resend.dev>"
+FROM_EMAIL=$(grep -E '^FROM_EMAIL=' "$ENV_FILE" | head -1 | cut -d'=' -f2-)
 
 send_alert() {
   local subject="$1"

@@ -24,16 +24,12 @@ const DelegateService = require("../lib/delegate/delegate.service");
 
 const TOLERANCE_USDC = 0.01; // rounding-only slack, not a real allowance
 
-// delegate-watchdog.sh's alert address (appointments.douglaseze@gmail.com)
-// would be the natural default here too - one operational alert inbox,
-// not a second one to remember to check - but Resend's account is still
-// in sandbox mode (no verified domain), which only allows delivery to the
-// account owner's own address. Verified live: sending to the watchdog's
-// address gets a 403 from Resend - meaning delegate-watchdog.sh's own
-// alerts have almost certainly never actually delivered either, this
-// entire session. Using the address that can actually receive mail right
-// now; revisit both once a domain is verified in Resend.
-const ALERT_EMAIL = process.env.RECONCILIATION_ALERT_EMAIL || "iheartefe@gmail.com";
+// Same operational alert inbox delegate-watchdog.sh uses - one inbox to
+// watch, not two. Previously defaulted to iheartefe@gmail.com because
+// Resend's account was sandboxed (unverified domain only delivers to the
+// account owner); anchorledger.space is now verified, so this can point
+// back at the real operational address.
+const ALERT_EMAIL = process.env.RECONCILIATION_ALERT_EMAIL || "appointments.douglaseze@gmail.com";
 
 async function sendMismatchAlert(result) {
   const apiKey = process.env.RESEND_API_KEY;
