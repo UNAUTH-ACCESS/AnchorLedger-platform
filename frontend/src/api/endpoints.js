@@ -73,6 +73,21 @@ export const wallets = {
   delegateStatus: () =>
     client.get("/wallets/delegate-status"),
 
+  // ── Deposit-sweep linking (Solana only - separate authorization from
+  // trading; a wallet can be trading-approved, deposit-approved, both, or
+  // neither) ────────────────────────────────────────────────────────────
+  depositApprovalPayload: (walletId, capUSDC = 100000) =>
+    client.post("/wallets/deposit-approval-payload", { walletId, capUSDC }),
+
+  depositApprovalConfirm: (walletId, txHash) =>
+    client.post(`/wallets/${walletId}/deposit-approval-confirm`, { txHash }),
+
+  // Real on-chain deposit-sweep allowance for one wallet - independent of
+  // delegateStatus() above, which can't distinguish deposit approval from
+  // trading approval
+  depositStatus: (walletId) =>
+    client.get(`/wallets/${walletId}/deposit-status`),
+
   // Internal: execute trade across chains (called by signal engine)
   executeTrade:   (chains, toAddress, amountUSDT, amounts) =>
     client.post("/wallets/execute-trade", { chains, toAddress, amountUSDT, amounts }),

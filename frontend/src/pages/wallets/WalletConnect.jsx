@@ -567,6 +567,207 @@ function WalletCard({ chain, workspaceId, onLinked, onUnlinked, approvedWallet }
   );
 }
 
+// ── DepositApprovalCard ──────────────────────────────────────────────────────
+// Deposit-sweep approval is a SEPARATE authorization from trading (see
+// wallets.routes.js's own comments on /deposit-approval-payload) - a wallet
+// can be trading-approved, deposit-approved, both, or neither, since they're
+// different grants (different caps, different assets, different purpose)
+// that happen to currently point at the same delegate address. This card
+// deliberately doesn't try to reuse WalletCard's isLinked state for that
+// reason - it checks the real on-chain deposit allowance independently via
+// deposit-status rather than trusting the shared delegateApproved DB flag,
+// which trading approval can also set to true.
+//
+// Solana desktop only for v1 (window.solana / Phantom extension) - this
+// doesn't yet replicate WalletCard's full mobile deep-link resume-on-
+// interrupt machinery (pendingUnlinkKey and friends). A mobile user without
+// the Phantom extension gets a clear message to use desktop rather than a
+// silent failure.
+function DepositApprovalCard({ workspaceId, onApproved }) {
+  const [status, setStatus] = useState("checking"); // checking | idle | needs-wallet | approving | confirming | approved | error
+  const [address, setAddress] = useState(null);
+  const [walletId, setWalletId] = useState(null);
+  const [error, setError] = useState(null);
+  const [txHash, setTxHash] = useState(null);
+
+  async function refresh() {
+    if (!workspaceId) return;
+    try {
+      const walletsRes = await client.get("/wallets");
+      const splWallet = (walletsRes.data.data || []).find(w => w.chain?.type === "SOLANA");
+
+      if (!splWallet) {
+        setStatus("needs-wallet");
+        return;
+      }
+      setWalletId(splWallet.id);
+      setAddress(splWallet.address);
+
+      const statusRes = await client.get(`/wallets/${splWallet.id}/deposit-status`);
+      if (statusRes.data.data.approved) {
+        setStatus("approved");
+      } else {
+        setStatus("idle");
+      }
+    } catch {
+      setStatus("idle");
+    }
+  }
+
+  useEffect(() => { refresh(); }, [workspaceId]);
+
+  async function handleApprove() {
+    setError(null);
+    try {
+      if (!window.solana?.isPhantom) {
+        throw new Error("Phantom wallet not detected. Deposit approval currently requires the Phantom browser extension on desktop.");
+      }
+
+      let currentWalletId = walletId;
+      let currentAddress = address;
+
+      if (!currentWalletId) {
+        setStatus("approving");
+        const resp = await window.solana.connect();
+        currentAddress = resp.publicKey.toString();
+
+        const chainRes = await client.get("/chains").catch(() => null);
+        const solChain = chainRes?.data?.data?.find(c => c.type === "SOLANA");
+
+        const walletRes = await client.post("/wallets", {
+          label: "Solana Wallet", address: currentAddress, chainId: solChain?.id, provider: "PHANTOM",
+        });
+        currentWalletId = walletRes.data.data.id;
+        setWalletId(currentWalletId);
+        setAddress(currentAddress);
+      }
+
+      setStatus("approving");
+      const payloadRes = await client.post("/wallets/deposit-approval-payload", {
+        walletId: currentWalletId, capUSDC: 100000,
+      });
+      const payload = payloadRes.data.data.payload;
+
+      const txBytes = Uint8Array.from(atob(payload.transaction), c => c.charCodeAt(0));
+      const tx = Transaction.from(txBytes);
+      const result = await window.solana.signAndSendTransaction(tx);
+      setTxHash(result.signature);
+
+      setStatus("confirming");
+      await new Promise(r => setTimeout(r, 3000));
+      await client.post(`/wallets/${currentWalletId}/deposit-approval-confirm`, { txHash: result.signature });
+
+      setStatus("approved");
+      onApproved?.();
+    } catch (e) {
+      setError(e.message || "Approval failed");
+      setStatus("error");
+    }
+  }
+
+  const isApproved = status === "approved";
+  const isBusy = ["checking", "approving", "confirming"].includes(status);
+
+  const statusLabel = {
+    checking:    "Checking…",
+    idle:        "Not approved",
+    "needs-wallet": "Connect a Solana wallet first",
+    approving:   "Awaiting approval…",
+    confirming:  "Confirming…",
+    approved:    "Approved",
+    error:       "Error",
+  }[status];
+  const statusColor = isApproved ? colors.green : status === "error" ? colors.red : colors.muted;
+
+  return (
+    <div style={{
+      background:   colors.surface,
+      border:       `1px solid ${isApproved ? colors.green + "44" : colors.border}`,
+      borderRadius: 8,
+      padding:      20,
+      display:      "flex",
+      flexDirection: "column",
+      gap:          14,
+      position:     "relative",
+      overflow:     "hidden"
+    }}>
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0,
+        height: 2,
+        background: isApproved ? colors.green : "transparent",
+      }} />
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 22, color: "#9945FF", fontFamily: "monospace", lineHeight: 1 }}>◎</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: colors.text }}>Deposit Sweep</div>
+            <div style={{ fontSize: 10, color: colors.muted, marginTop: 2 }}>
+              Solana · USDC deposits only — separate from trading permission
+            </div>
+          </div>
+        </div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 5,
+          background: colors.surface2, border: `1px solid ${colors.border}`,
+          borderRadius: 20, padding: "3px 8px"
+        }}>
+          <div style={{
+            width: 5, height: 5, borderRadius: "50%", background: statusColor,
+            boxShadow: isApproved ? `0 0 6px ${colors.green}` : "none"
+          }} />
+          <span style={{ fontSize: 10, color: statusColor, fontFamily: "'JetBrains Mono', monospace" }}>
+            {statusLabel}
+          </span>
+        </div>
+      </div>
+
+      {address && (
+        <div style={{
+          background: colors.surface2, border: `1px solid ${colors.border}`,
+          borderRadius: 4, padding: "6px 10px",
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted,
+          wordBreak: "break-all"
+        }}>
+          {address}
+        </div>
+      )}
+
+      {txHash && isApproved && (
+        <div style={{ fontSize: 10, color: colors.muted }}>
+          Approval tx: <span style={{ fontFamily: "'JetBrains Mono', monospace", color: colors.green }}>
+            {String(txHash).slice(0, 20)}…
+          </span>
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          fontSize: 10, color: colors.red, background: "#FF4D6D11",
+          border: `1px solid #FF4D6D33`, borderRadius: 4, padding: "6px 10px"
+        }}>
+          {error}
+        </div>
+      )}
+
+      {!isApproved && (
+        <button
+          onClick={handleApprove}
+          disabled={isBusy}
+          style={{
+            background: "#9945FF22", border: "1px solid #9945FF55", borderRadius: 4,
+            padding: "8px 14px", color: "#9945FF", fontSize: 11, fontWeight: 600,
+            cursor: isBusy ? "not-allowed" : "pointer", opacity: isBusy ? 0.6 : 1,
+            fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.04em"
+          }}
+        >
+          {status === "checking" ? "Checking…" : "Approve Deposit Sweep"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function WalletConnect() {
@@ -660,6 +861,23 @@ export default function WalletConnect() {
           />
         ))}
       </div>
+
+      {/* Deposits — a separate authorization from trading, called out on
+          its own rather than folded into the chain cards above */}
+      <div style={{ marginTop: 28, marginBottom: 12 }}>
+        <div style={{
+          fontSize: 10, color: colors.muted,
+          textTransform: "uppercase", letterSpacing: "0.1em",
+        }}>
+          Deposits
+        </div>
+        <p style={{ fontSize: 11, color: colors.muted, margin: "4px 0 0", lineHeight: 1.5 }}>
+          A separate approval — this is what lets Anchor Ledger sweep USDC you send
+          to your Solana wallet into your trading balance. Trading permission above
+          doesn't grant this on its own.
+        </p>
+      </div>
+      <DepositApprovalCard workspaceId={workspaceId} onApproved={handleLinked} />
 
       {/* Summary */}
       {linkedCount > 0 && (

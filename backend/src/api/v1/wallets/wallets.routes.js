@@ -189,8 +189,32 @@ router.post("/deposit-approval-payload", authenticate, requireKycApproved, async
     if (walletWithChain.chain?.type !== "SOLANA") {
       throw new AppError("Deposit approval is only supported for Solana wallets", 400, "VALIDATION_ERROR");
     }
-    const result = await delegatePost("/usdc-deposit-approval-payload", { capUSDC });
+    const result = await delegatePost("/usdc-deposit-signable-payload", { ownerAddress: wallet.address, capUSDC });
     res.json({ success: true, data: { payload: result.payload } });
+  } catch (err) { next(err); }
+});
+
+// GET /wallets/:id/deposit-status
+// Real on-chain deposit-sweep allowance for this wallet - deliberately
+// separate from /delegate-status, which only reflects the shared
+// delegateApproved DB flag. That flag is set true by EITHER the trading
+// approval or the deposit approval (both currently write delegateChain:
+// "SPL" for a Solana wallet), so it can't tell a client whether deposit-
+// sweep specifically is actually authorized on-chain. This asks the real
+// USDC-mainnet allowance instead of trusting the DB.
+router.get("/:id/deposit-status", authenticate, async (req, res, next) => {
+  try {
+    const wallet = await assertWalletAccess(req.params.id, req.user.id);
+    const walletWithChain = await prisma.wallet.findUnique({ where: { id: req.params.id }, include: { chain: true } });
+    if (walletWithChain.chain?.type !== "SOLANA") {
+      return res.json({ success: true, data: { approved: false, allowance: 0 } });
+    }
+    const statusRes = await delegatePost("/usdc-deposit-status", { address: wallet.address });
+    const allowanceValue = Number(statusRes.allowance);
+    res.json({
+      success: true,
+      data: { approved: Number.isFinite(allowanceValue) && allowanceValue > 0, allowance: allowanceValue || 0 },
+    });
   } catch (err) { next(err); }
 });
 
