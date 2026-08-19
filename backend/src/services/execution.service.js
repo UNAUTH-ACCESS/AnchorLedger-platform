@@ -61,7 +61,15 @@ async function signAndExecute(proposalId) {
   });
 
   if (!proposal) throw new Error(`Proposal ${proposalId} not found`);
-  if (proposal.status !== "PENDING") throw new Error(`Proposal ${proposalId} is not pending`);
+  // Accept PENDING (the manual-execute route calls this directly on a
+  // freshly-evaluated proposal, relying on the SIGNED transition below) or
+  // SIGNED (autosign.service.js atomically claims SIGNED itself first, to
+  // guard against a race with a concurrent manual execute, before calling
+  // here) - anything else means this proposal has already been executed,
+  // failed, or cancelled, and shouldn't be re-run.
+  if (proposal.status !== "PENDING" && proposal.status !== "SIGNED") {
+    throw new Error(`Proposal ${proposalId} is not pending or signed (status: ${proposal.status})`);
+  }
 
   // Resolve chain key from wallet provider
   const chainKey = proposal.wallet.delegateChain ||

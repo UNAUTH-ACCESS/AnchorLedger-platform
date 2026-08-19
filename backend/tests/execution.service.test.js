@@ -93,9 +93,17 @@ describe("signAndExecute — basic proposal validation", () => {
     await expect(signAndExecute("missing-id")).rejects.toThrow(/not found/);
   });
 
-  test("throws if the proposal is not PENDING", async () => {
+  test("accepts a SIGNED proposal (autosign.service.js atomically claims SIGNED itself before calling here, to guard against a race with a concurrent manual execute)", async () => {
     prisma.tradeProposal.findUnique.mockResolvedValue(baseProposal({ status: "SIGNED" }));
-    await expect(signAndExecute("proposal-1")).rejects.toThrow(/is not pending/);
+    // Proceeds past the entry guard - fails later for an unrelated reason
+    // (this fixture's wallet has no chain/provider match), proving the
+    // guard itself didn't reject it.
+    await expect(signAndExecute("proposal-1")).rejects.not.toThrow(/is not pending or signed/);
+  });
+
+  test("throws if the proposal has already been executed, failed, or cancelled", async () => {
+    prisma.tradeProposal.findUnique.mockResolvedValue(baseProposal({ status: "CONFIRMED" }));
+    await expect(signAndExecute("proposal-1")).rejects.toThrow(/is not pending or signed/);
   });
 });
 
