@@ -65,7 +65,7 @@ const CHAINS = [
   {
     key:      "TRC20",
     label:    "Tron",
-    sub:      "TRX trades · TRC-20 USDT",
+    sub:      "Nile TESTNET · TRX trades · TRC-20 USDT (test token, no real value)",
     provider: "TRONLINK",
     icon:     "◈",
     color:    "#FF060A",

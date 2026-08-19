@@ -9,6 +9,49 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { colors } from "../../lib/tokens";
 import { fmt } from "../../lib/format";
 
+// Real on-chain reference for a position - entry tx while open, settlement
+// tx once closed. Built from chain.explorerUrl (now correctly per-network,
+// e.g. Nile testnet's own explorer, not mainnet's) rather than a hardcoded
+// domain, so this keeps working once real mainnet chains are added too.
+function explorerLink(position, txHash) {
+  // A handful of pre-fix records stored the literal string "true"/"false" as
+  // their txHash (a since-fixed bug where a Tron SDK call result was mistaken
+  // for the transaction ID) - guard against linking out to a garbage URL for
+  // those rather than silently rendering a real-looking broken link.
+  if (!txHash || !/^[0-9a-fA-F]{16,}$/.test(txHash) || !position.chain?.explorerUrl) return null;
+  return `${position.chain.explorerUrl}/#/transaction/${txHash}`;
+}
+
+function isTestnet(chain) {
+  return chain && chain.networkId !== "mainnet";
+}
+
+function TestnetBadge() {
+  return (
+    <span style={{
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700,
+      padding: "2px 6px", borderRadius: 3, marginLeft: 6,
+      background: colors.orange + "22", color: colors.orange, border: `1px solid ${colors.orange}44`,
+    }} title="This trade settled on a test network - no real value moved">
+      TESTNET
+    </span>
+  );
+}
+
+function TxLink({ position, txHash, label }) {
+  const href = explorerLink(position, txHash);
+  if (!href) {
+    return <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted }}>—</span>;
+  }
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.violet, textDecoration: "none",
+    }}>
+      {label} ↗
+    </a>
+  );
+}
+
 function CloseButton({ position, onClosed }) {
   const [state, setState]   = useState("idle"); // idle | confirming | closing | done | error
   const [error, setError]   = useState(null);
@@ -110,7 +153,7 @@ function PositionRow({ position, onClosed }) {
         </span>
       </td>
       <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: colors.muted }}>
-        {position.venue?.name}
+        {position.venue?.name}{isTestnet(position.chain) && <TestnetBadge/>}
       </td>
       <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textAlign: "right" }}>
         {fmt.num(position.size, 4)}
@@ -125,6 +168,9 @@ function PositionRow({ position, onClosed }) {
         <span style={{ color: pnlColor }}>
           {fmt.usd(pnl)} <span style={{ fontSize: 10 }}>({fmt.pct(pnlPct)})</span>
         </span>
+      </td>
+      <td style={{ padding: "10px 12px" }}>
+        <TxLink position={position} txHash={position.fill?.tradeProposal?.transaction?.txHash} label="Open tx"/>
       </td>
       <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted }}>
         {fmt.ago(position.openedAt)}
@@ -156,7 +202,7 @@ function ClosedRow({ position }) {
         </span>
       </td>
       <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: colors.muted }}>
-        {position.venue?.name}
+        {position.venue?.name}{isTestnet(position.chain) && <TestnetBadge/>}
       </td>
       <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textAlign: "right" }}>
         {fmt.num(position.size, 4)}
@@ -170,6 +216,9 @@ function ClosedRow({ position }) {
       <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textAlign: "right" }}>
         <span style={{ color: pnlColor, fontWeight: 600 }}>{fmt.usd(pnl)}</span>
       </td>
+      <td style={{ padding: "10px 12px" }}>
+        <TxLink position={position} txHash={position.settlementTxHash} label="Settle tx"/>
+      </td>
       <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted }}>
         {fmt.ago(position.closedAt)}
       </td>
@@ -179,6 +228,7 @@ function ClosedRow({ position }) {
 }
 
 function PositionCard({ position, onClosed }) {
+  const { canExecuteTrades } = usePermissions();
   const pnl    = position.unrealizedPnl || 0;
   const pnlPct = position.entryPrice > 0
     ? ((position.currentPrice - position.entryPrice) / position.entryPrice) * 100
@@ -202,7 +252,7 @@ function PositionCard({ position, onClosed }) {
           background: sideColor + "22", color: sideColor, border: `1px solid ${sideColor}44`,
         }}>{position.side}</span>
         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted, marginLeft: "auto" }}>
-          {position.venue?.name}
+          {position.venue?.name}{isTestnet(position.chain) && <TestnetBadge/>}
         </span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -225,6 +275,7 @@ function PositionCard({ position, onClosed }) {
             {fmt.usd(pnl)} <span style={{ fontSize: 11 }}>({fmt.pct(pnlPct)})</span>
           </div>
         </div>
+        <TxLink position={position} txHash={position.fill?.tradeProposal?.transaction?.txHash} label="Open tx"/>
         {canExecuteTrades && <CloseButton position={position} onClosed={onClosed}/>}
       </div>
     </div>
@@ -254,9 +305,9 @@ export default function Positions() {
   const closedList = closed || [];
   const totalPnl   = openList.reduce((s, p) => s + (p.unrealizedPnl || 0), 0);
 
-  const headers     = ["Asset","Side","Venue","Size","Entry","Mark","P&L","Age",""];
+  const headers     = ["Asset","Side","Venue","Size","Entry","Mark","P&L","Tx","Age",""];
   const hdrsRight   = ["Size","Entry","Mark","P&L"];
-  const hdrsClosd   = ["Asset","Side","Venue","Size","Entry","Closed","Realized P&L","Age",""];
+  const hdrsClosd   = ["Asset","Side","Venue","Size","Entry","Closed","Realized P&L","Tx","Age",""];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -302,9 +353,9 @@ export default function Positions() {
                 </tr>
               </thead>
               <tbody>
-                {loadingOpen && <tr><td colSpan={9} style={{ padding: 24 }}><LoadingState rows={2}/></td></tr>}
+                {loadingOpen && <tr><td colSpan={10} style={{ padding: 24 }}><LoadingState rows={2}/></td></tr>}
                 {!loadingOpen && openList.length === 0 && (
-                  <tr><td colSpan={9}><EmptyState message="No open positions"/></td></tr>
+                  <tr><td colSpan={10}><EmptyState message="No open positions"/></td></tr>
                 )}
                 {!loadingOpen && openList.map(p => (
                   <PositionRow key={p.id} position={p} onClosed={() => { refetchOpen(); refetchClosed(); }}/>
@@ -337,7 +388,7 @@ export default function Positions() {
                 </tr>
               </thead>
               <tbody>
-                {loadingClosed && <tr><td colSpan={9} style={{ padding: 24 }}><LoadingState rows={2}/></td></tr>}
+                {loadingClosed && <tr><td colSpan={10} style={{ padding: 24 }}><LoadingState rows={2}/></td></tr>}
                 {!loadingClosed && closedList.map(p => <ClosedRow key={p.id} position={p}/>)}
               </tbody>
             </table>
