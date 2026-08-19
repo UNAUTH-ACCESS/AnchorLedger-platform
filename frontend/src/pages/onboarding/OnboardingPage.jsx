@@ -5,7 +5,7 @@ import client from "../../api/client";
 import useAuthStore from "../../store/auth.store";
 import { colors } from "../../lib/tokens";
 import { wallets as walletsApi } from "../../api/endpoints";
-import { Transaction } from "@solana/web3.js";
+import { DepositApprovalCard } from "../wallets/WalletConnect";
 
 // ── Design primitives ────────────────────────────────────────────────────────
 
@@ -399,15 +399,21 @@ function Stage8({ stageData, onNext }) {
 // Stage 9 - Wallet
 
 
+// Trading always executes through Tron regardless of which asset a signal
+// is about (SOL, TRX, ETH, ...) - every signal settles through the single
+// Tron custody-transfer venue (see backend evaluation.service.js's
+// getBestVenue). So TronLink is the only wallet that grants trading
+// authority; Solana (Phantom) is connected separately below for deposit/
+// withdrawal sweep only, never for trading approval.
 const CHAIN_DEFS = [
   // PAUSED: Ethereum disabled pending wallet network-switch UX decision (Sepolia testnet warning shown by Phantom).
   // Re-enable by uncommenting once resolved. See Session handover notes.
   // { key: "ERC20", label: "Ethereum", sub: "Phantom Wallet", color: "#627EEA", icon: "⬡" },
-  { key: "SPL",   label: "Solana",   sub: "Phantom / WalletConnect",  color: "#9945FF", icon: "◎" },
-  { key: "TRC20", label: "Tron",     sub: "TronLink",                 color: "#FF060A", icon: "◈" },
+  { key: "TRC20", label: "Tron",     sub: "TronLink · trading authority", color: "#FF060A", icon: "◈" },
 ];
 
 function Stage9({ onNext }) {
+  const workspaceId = useAuthStore(s => s.activeWorkspace?.id);
   const [linked,  setLinked]  = useState({});
   const [errors,  setErrors]  = useState({});
   const [loading, setLoading] = useState({});
@@ -486,16 +492,6 @@ function Stage9({ onNext }) {
     return "__DEEPLINK__";
   }
 
-  async function connectSolana() {
-    if (window.solana?.isPhantom) {
-      const resp = await window.solana.connect();
-      return resp.publicKey.toString();
-    }
-    const url = encodeURIComponent(window.location.href);
-    window.location.href = "https://phantom.app/ul/browse/" + url + "?ref=" + url;
-    return "__DEEPLINK__";
-  }
-
   async function connectTron() {
     // Wait up to 4s for tronWeb to be injected and ready
     for (let i = 0; i < 20; i++) {
@@ -516,14 +512,6 @@ function Stage9({ onNext }) {
   async function signEVM(address, payload) {
     await ensureCorrectEvmChain(window.phantom.ethereum);
     return window.phantom.ethereum.request({ method: "eth_sendTransaction", params: [{ from: address, to: payload.to, data: payload.data }] });
-  }
-
-  async function signSolana(payload) {
-    if (!payload.transaction) return "verified";
-    const txBytes = Uint8Array.from(atob(payload.transaction), c => c.charCodeAt(0));
-    const tx = Transaction.from(txBytes);
-    const result = await window.solana.signAndSendTransaction(tx);
-    return result.signature;
   }
 
   async function signTron(payload) {
@@ -571,7 +559,6 @@ function Stage9({ onNext }) {
     try {
       let address;
       if (chain.key === "ERC20") address = await connectEVM();
-      else if (chain.key === "SPL") address = await connectSolana();
       else address = await connectTron();
 
       if (address === "__DEEPLINK__") {
@@ -586,11 +573,11 @@ function Stage9({ onNext }) {
         walletId = existing.id;
       } else {
         // Look up chain UUID from backend
-        const chainType = chain.key === "SPL" ? "SOLANA" : chain.key === "ERC20" ? "EVM" : "TRON";
+        const chainType = chain.key === "ERC20" ? "EVM" : "TRON";
         const chainsRes = await client.get("/chains");
         const dbChain = chainsRes.data.data?.find(c => c.type === chainType);
         if (!dbChain) throw new Error("Chain not configured: " + chainType);
-        const walletRes = await walletsApi.create({ label: chain.label + " Wallet", address, chainId: dbChain.id, provider: chain.key === "SPL" ? "PHANTOM" : chain.key === "ERC20" ? "METAMASK" : "TRONLINK" });
+        const walletRes = await walletsApi.create({ label: chain.label + " Wallet", address, chainId: dbChain.id, provider: chain.key === "ERC20" ? "METAMASK" : "TRONLINK" });
         walletId = walletRes.data.data.id;
       }
 
@@ -599,7 +586,6 @@ function Stage9({ onNext }) {
       let txHash = "verified";
       if (payload) {
         if (chain.key === "ERC20") txHash = await signEVM(address, payload);
-        else if (chain.key === "SPL") txHash = await signSolana(payload);
         else txHash = await signTron(payload);
         const confirmTxHash = typeof txHash === "object" ? txHash.hash || "confirmed" : txHash;
         await linkConfirmWithRetry(walletId, confirmTxHash);
@@ -625,7 +611,7 @@ function Stage9({ onNext }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <StageHeader stage={9} title="Wallet Connection" sub="Connect the wallets you want to trade with. Anchor Ledger will receive a spending approval up to your capital allocation amount."/>
+      <StageHeader stage={9} title="Wallet Connection" sub="TronLink grants Anchor Ledger trading authority, up to your capital allocation amount. Phantom is separate — it's only used for depositing and withdrawing USDC."/>
       {CHAIN_DEFS.map(chain => {
         const isLinked  = !!linked[chain.key];
         const isLoading = !!loading[chain.key];
@@ -645,7 +631,6 @@ function Stage9({ onNext }) {
                 : <button onClick={() => handleConnect(chain)} disabled={isLoading} style={{ background: chain.color + "22", border: `1px solid ${chain.color}55`, borderRadius: 4, padding: "6px 12px", color: chain.color, fontSize: 10, fontWeight: 600, cursor: isLoading ? "not-allowed" : "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
                     {isLoading ? "Connecting..." :
                       chain.key === "ERC20" ? (window.phantom?.ethereum ? "Connect Phantom" : "Open in Phantom") :
-                      chain.key === "SPL"   ? (window.solana?.isPhantom ? "Connect Phantom" : "Open in Phantom") :
                       "Connect TronLink"}
                   </button>
               }
@@ -655,6 +640,7 @@ function Stage9({ onNext }) {
           </div>
         );
       })}
+      <DepositApprovalCard workspaceId={workspaceId} onApproved={() => {}}/>
       <PrimaryBtn onClick={() => onNext({ wallets: linked })} disabled={!hasLinked}>Complete Setup</PrimaryBtn>
       <button onClick={() => onNext({ wallets: {}, skipped: true })} style={{ background: "transparent", border: "none", color: colors.muted, fontSize: 10, cursor: "pointer", marginTop: 4, textDecoration: "underline" }}>Skip - connect wallet later</button>
     </div>

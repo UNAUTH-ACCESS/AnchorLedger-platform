@@ -583,7 +583,7 @@ function WalletCard({ chain, workspaceId, onLinked, onUnlinked, approvedWallet }
 // interrupt machinery (pendingUnlinkKey and friends). A mobile user without
 // the Phantom extension gets a clear message to use desktop rather than a
 // silent failure.
-function DepositApprovalCard({ workspaceId, onApproved }) {
+export function DepositApprovalCard({ workspaceId, onApproved }) {
   const [status, setStatus] = useState("checking"); // checking | idle | needs-wallet | approving | confirming | approved | error
   const [address, setAddress] = useState(null);
   const [walletId, setWalletId] = useState(null);
