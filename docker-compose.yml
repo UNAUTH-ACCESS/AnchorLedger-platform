@@ -1,8 +1,20 @@
+# Shared log rotation - without this, docker's default json-file driver
+# never rotates or caps container logs, so they grow unbounded for the
+# life of a container. Found none of these services had it set; applying
+# to all of them uniformly. Takes effect on next recreate, not on already-
+# running containers - deliberately not restarting anything to apply this.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: quantedge_postgres
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-quantedge}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantedge_secret}
@@ -24,6 +36,7 @@ services:
       target: api
     container_name: anchorledger_api
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,6 +82,7 @@ services:
       target: worker
     container_name: anchorledger_worker
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,6 +132,7 @@ services:
       dockerfile: Dockerfile
     container_name: anchorledger_frontend
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - internal
 
@@ -125,6 +140,7 @@ services:
     image: nginx:alpine
     container_name: anchorledger_nginx
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"
@@ -140,6 +156,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     container_name: anchorledger_certbot
+    logging: *default-logging
     volumes:
       - ./nginx/certbot/conf:/etc/letsencrypt
       - ./nginx/certbot/www:/var/www/certbot
