@@ -53,10 +53,10 @@ router.post("/stage/:n", authenticate, requireWorkspace, async (req, res, next) 
         signalStrengthThreshold: req.body.signalStrengthThreshold ?? undefined,
       };
 
-      const portfolio = await prisma.portfolio.findFirst({ where: { workspaceId }, include: { riskConfig: true } });
+      let portfolio = await prisma.portfolio.findFirst({ where: { workspaceId }, include: { riskConfig: true } });
 
       if (!portfolio) {
-        await prisma.portfolio.create({
+        portfolio = await prisma.portfolio.create({
           data: {
             workspaceId,
             name: "Main Portfolio",
@@ -68,6 +68,27 @@ router.post("/stage/:n", authenticate, requireWorkspace, async (req, res, next) 
         await prisma.riskConfig.update({ where: { id: portfolio.riskConfig.id }, data: riskFields });
       } else {
         await prisma.riskConfig.create({ data: { portfolioId: portfolio.id, ...riskFields } });
+      }
+
+      // Attach the portfolio to whichever strategy is actually live, so it
+      // can receive signals at all. This was a real, hard gap: nothing
+      // anywhere ever created this link automatically - a portfolio could
+      // exist, wallets could be linked, real deposits could land, and
+      // trading would still never happen, silently, because
+      // evaluateSignal() only ever looks at portfolios with an explicit
+      // PortfolioSignalConfig row. Idempotent (upsert) and self-healing -
+      // runs on every stage-8 submission, not just first-time creation, so
+      // a portfolio from before this fix existed gets attached too the
+      // next time its owner touches this step.
+      const liveConfig = await prisma.signalConfig.findFirst({
+        where: { status: "FROZEN", strategy: { name: "OrderFlowMomentum" } },
+      });
+      if (liveConfig) {
+        await prisma.portfolioSignalConfig.upsert({
+          where: { portfolioId_signalConfigId: { portfolioId: portfolio.id, signalConfigId: liveConfig.id } },
+          create: { portfolioId: portfolio.id, signalConfigId: liveConfig.id, active: true },
+          update: { active: true, disabledAt: null },
+        });
       }
     }
 

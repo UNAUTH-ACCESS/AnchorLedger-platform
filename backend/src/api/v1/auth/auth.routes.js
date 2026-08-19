@@ -190,6 +190,7 @@ router.post("/register", registerLimiter, [
     const { access, refresh } = generateTokens(result.user.id);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await prisma.refreshToken.create({ data: { userId: result.user.id, token: refresh, expiresAt } });
+    setRefreshCookie(res, refresh);
 
     // Send welcome + verification emails (non-blocking)
     sendWelcome(result.user.id, result.workspace.id).catch(() => {});
@@ -198,7 +199,7 @@ router.post("/register", registerLimiter, [
     res.status(201).json({
       success: true,
       data: {
-        accessToken: access, refreshToken: refresh,
+        accessToken: access,
         user: { id: result.user.id, email, name, emailVerified: false, twoFactorEnabled: false },
         workspace: { id: result.workspace.id, slug },
       },
