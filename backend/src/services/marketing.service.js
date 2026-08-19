@@ -98,18 +98,18 @@ async function sendWelcomeEmail(subscriber) {
       Welcome to Anchor Ledger
     </h2>
     <p style="margin-bottom:16px;">
-      You're on the list. Anchor Ledger is a systematic quantitative trading platform
-      built on a validated research framework — not vibes, not signals from Telegram,
-      not copy trading.
+      You're on the list. Anchor Ledger is a systematic trading platform — trades are
+      generated and executed algorithmically from live market data, not manual calls,
+      not signals from Telegram, not copy trading.
     </p>
     <p style="margin-bottom:16px;">
-      Here's what makes it different:
+      Here's how it works:
     </p>
     <ul style="margin-bottom:16px;padding-left:20px;">
-      <li style="margin-bottom:8px;">Signals are research-validated through 8 statistical gates before they touch real money</li>
-      <li style="margin-bottom:8px;">Self-custody execution — your keys, your funds, always</li>
-      <li style="margin-bottom:8px;">Regime-aware — the system knows whether the market is trending, ranging, or in stress</li>
-      <li style="margin-bottom:8px;">Fully autonomous — entry, position management, and exit without manual intervention</li>
+      <li style="margin-bottom:8px;">Deposits are pooled into a platform-managed vault and used for trading on your behalf — not held in a wallet you control day to day</li>
+      <li style="margin-bottom:8px;">Signals are generated from live market data and checked against your risk settings before any trade executes</li>
+      <li style="margin-bottom:8px;">Regime-aware — trading pauses automatically during high-volatility market conditions</li>
+      <li style="margin-bottom:8px;">Autonomous once enabled — entry, exit, and risk management run without manual intervention</li>
     </ul>
     <p style="margin-bottom:24px;">
       We're in private beta. Early access invites go out to this list first.

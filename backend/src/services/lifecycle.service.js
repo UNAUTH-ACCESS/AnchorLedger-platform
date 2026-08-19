@@ -138,7 +138,7 @@ function buildVerification(user, verifyUrl) {
       Verify Email →
     </a>
     <p style="margin-top:24px;font-size:11px;color:#5A6478;">
-      If you didn't create a Anchor Ledger account, you can safely ignore this email.
+      If you didn't create an Anchor Ledger account, you can safely ignore this email.
     </p>
   `);
 }
@@ -181,7 +181,7 @@ function buildWelcome(user, workspace) {
     <ol style="margin-bottom:20px;padding-left:20px;color:#9BA8B4;">
       <li style="margin-bottom:8px;">Connect your wallet in Settings</li>
       <li style="margin-bottom:8px;">Review your risk configuration</li>
-      <li style="margin-bottom:8px;">Wait for the first signal — it fires every 2 minutes when the edge is there</li>
+      <li style="margin-bottom:8px;">The system checks for a trade signal every 60 seconds — you'll be notified when one fires</li>
       <li style="margin-bottom:8px;">Sign your first trade proposal or enable auto-execute</li>
     </ol>
     <a href="${APP_URL}/dashboard" style="display:inline-block;background:#00D4AA;color:#0A0A0F;

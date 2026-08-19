@@ -34,12 +34,12 @@ const config = {
   DATABASE_URL: requireVar("DATABASE_URL"),
   DELEGATE_SERVER_URL: requireVar("DELEGATE_SERVER_URL"),
   DELEGATE_SHARED_SECRET: requireVar("DELEGATE_SHARED_SECRET", { minLength: 32 }),
-  APP_URL: optionalVar("APP_URL", "https://anchorledger.exchange"),
+  APP_URL: optionalVar("APP_URL", "https://anchorledger.space"),
   RESEND_API_KEY: optionalVar("RESEND_API_KEY", null),
   FROM_EMAIL: optionalVar("FROM_EMAIL", "Anchor Ledger <onboarding@resend.dev>"),
   VAPID_PUBLIC_KEY: optionalVar("VAPID_PUBLIC_KEY", null),
   VAPID_PRIVATE_KEY: optionalVar("VAPID_PRIVATE_KEY", null),
-  VAPID_SUBJECT: optionalVar("VAPID_SUBJECT", "mailto:notifications@anchorledger.exchange"),
+  VAPID_SUBJECT: optionalVar("VAPID_SUBJECT", "mailto:notifications@anchorledger.space"),
 };
 
 function reportAndExitIfErrors() {

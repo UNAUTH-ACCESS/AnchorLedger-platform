@@ -7,10 +7,18 @@
  */
 
 const logger = require("../../lib/logger");
+const config = require("../../lib/config");
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS   = process.env.FROM_EMAIL || "Anchor Ledger <onboarding@resend.dev>";
-const APP_URL        = `https://${process.env.DOMAIN || "anchorledger.exchange"}`;
+// Was building its own URL from a DOMAIN env var that's never actually
+// passed to the container (only used to derive CORS_ORIGIN in
+// docker-compose.yml) - every deep link and unsubscribe-style footer link
+// in every email sent through this adapter was silently using the
+// hardcoded fallback (a domain that was never live) instead of the real
+// site. config.APP_URL is the same, correctly-wired variable
+// lifecycle.service.js and marketing.service.js already use.
+const APP_URL = config.APP_URL;
 
 async function deliver(notification, userEmail) {
   const apiKey = process.env.RESEND_API_KEY;
