@@ -19,7 +19,13 @@ router.get("/", authenticate, requireWorkspace, async (req, res, next) => {
 
     const positions = await prisma.position.findMany({
       where: { portfolioId: { in: portfolioIds }, status },
-      include: { asset: true, venue: true, chain: true, portfolio: true },
+      // fill.tradeProposal.transaction is included so the real entry txHash
+      // is available here too, not just on the single-position GET - needed
+      // to show a clickable on-chain link per position in the list view.
+      include: {
+        asset: true, venue: true, chain: true, portfolio: true,
+        fill: { include: { tradeProposal: { include: { transaction: true } } } },
+      },
       orderBy: { openedAt: "desc" },
     });
 
