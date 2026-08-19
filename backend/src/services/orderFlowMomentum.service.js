@@ -41,12 +41,14 @@ const FIXED_SIZE_PCT       = 0.01; // 1% of NAV per trade until enough real outc
 const MIN_TRADES_FOR_KELLY = 20;
 const KELLY_MULTIPLIER     = 0.25; // quarter-Kelly - conservative given a still-small sample
 
-// Bounded first live run - stop opening new trades once this many have been
-// opened (open + closed, this strategy only), so the founder can review a
-// small, fixed batch of real results before deciding whether to let it run
-// unbounded. Existing open positions still exit normally via
-// checkOrderFlowMomentumExits regardless of this cap.
+// Rolling daily cap - a handful of trades a day (3-5) is the intended
+// pace, not a one-time lifetime budget. Counts against a trailing 24h
+// window rather than all-time, so it naturally resets day to day instead
+// of permanently jamming once the cap is hit once. Existing open
+// positions still exit normally via checkOrderFlowMomentumExits
+// regardless of this cap.
 const MAX_TRADES_CAP = parseInt(process.env.ORDER_FLOW_MAX_TRADES_CAP || "5");
+const TRADES_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Compute direction and strength from live features. Returns
@@ -170,10 +172,14 @@ async function runOrderFlowMomentumCycle(features, livePrice) {
 
     const existingSignalIds = await getSignalIdsForConfig(config.id);
     const tradesOpened = await prisma.tradeProposal.count({
-      where: { signalId: { in: existingSignalIds }, status: { in: ["CONFIRMED", "SUBMITTED", "SIGNED"] } },
+      where: {
+        signalId: { in: existingSignalIds },
+        status: { in: ["CONFIRMED", "SUBMITTED", "SIGNED"] },
+        proposedAt: { gte: new Date(Date.now() - TRADES_WINDOW_MS) },
+      },
     });
     if (tradesOpened >= MAX_TRADES_CAP) {
-      logger.debug("[orderFlowMomentum] Trade cap reached — no new signals", { tradesOpened, cap: MAX_TRADES_CAP });
+      logger.debug("[orderFlowMomentum] Daily trade cap reached — no new signals", { tradesOpened, cap: MAX_TRADES_CAP });
       return;
     }
 

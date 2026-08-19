@@ -163,7 +163,11 @@ router.post("/register", registerLimiter, [
           // (no onboarding key at all), and RouteGuard's "!onboarding = already
           // complete" fallback incorrectly sends brand-new accounts straight
           // to a dashboard with nothing configured instead of onboarding.
-          settings: { onboarding: { stage: 3, complete: false, data: {} } },
+          // autoExecute defaults on — founder wants trading to start
+          // automatically once a portfolio is funded and approved, not
+          // gated behind a separate manual Settings toggle nobody's told
+          // about during onboarding.
+          settings: { onboarding: { stage: 3, complete: false, data: {} }, autoExecute: true },
         },
       });
 
