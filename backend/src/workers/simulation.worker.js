@@ -31,6 +31,11 @@ const { sendDrawdownAlert }     = require("../services/lifecycle.service");
 const { watchForDeposits }      = require("../services/depositWatcher.service");
 const { reconcileStuckSettlements } = require("./settlementReconciliation.job");
 const { checkVaultReconciliation }  = require("./vaultReconciliation.job");
+const {
+  STRATEGY_NAME: ORDER_FLOW_STRATEGY_NAME,
+  runOrderFlowMomentumCycle,
+  checkOrderFlowMomentumExits,
+} = require("../services/orderFlowMomentum.service");
 
 const SIGNAL_INTERVAL   = parseInt(process.env.SIGNAL_INTERVAL_MS    || "60000");
 const MARKET_INTERVAL   = parseInt(process.env.MARKET_FEED_INTERVAL_MS || "30000");
@@ -93,10 +98,17 @@ async function generateSignal() {
       return;
     }
 
+    // OrderFlowMomentum runs its own, separate signal-generation path (see
+    // runOrderFlowMomentumCycle below) - excluded here so it isn't also
+    // processed by this older strength-blend logic, which uses a different
+    // (and for real market data, unreachable) threshold formula.
     const configs = await prisma.signalConfig.findMany({
-      where: { status: "FROZEN" },
+      where: { status: "FROZEN", strategy: { name: { not: ORDER_FLOW_STRATEGY_NAME } } },
       include: { strategy: true },
     });
+
+    await runOrderFlowMomentumCycle(features, livePrices.SOL);
+
     if (configs.length === 0) return;
 
     for (const config of configs) {
@@ -204,6 +216,12 @@ async function generateSignal() {
 async function marketFeedLoop() {
   try {
     await updatePositionPrices(livePrices);
+
+    // OrderFlowMomentum's own take-profit/stop-loss/TTL check runs first,
+    // with its own tighter thresholds - the generic stop-loss/TTL check
+    // below still applies afterward too as a portfolio-level backstop
+    // (harmless: closePosition() is a no-op on an already-closed position).
+    await checkOrderFlowMomentumExits();
 
     const openPositions = await prisma.position.findMany({
       where: { status: "OPEN" },

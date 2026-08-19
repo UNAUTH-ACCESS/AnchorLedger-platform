@@ -4,7 +4,10 @@ const logger = require("../lib/logger");
 
 // Called after a Signal is created.
 // Finds all portfolios running the SignalConfig, evaluates each independently.
-async function evaluateSignal(signal) {
+// livePrice is optional - callers with a real current price (e.g. a live
+// feed already in-process) should pass it so the resulting proposal is
+// priced honestly instead of falling back to getMockPrice's hardcoded values.
+async function evaluateSignal(signal, livePrice) {
   logger.info("Evaluating signal across portfolios", { signalId: signal.id, asset: signal.assetId });
 
   // Find all active portfolios running this signal config
@@ -60,7 +63,7 @@ async function evaluateSignal(signal) {
           assetId: signal.assetId,
           direction: signal.direction,
           notional: evaluation.notionalApplied,
-          estEntry: await getMockPrice(asset.symbol),
+          estEntry: (typeof livePrice === "number" && livePrice > 0) ? livePrice : await getMockPrice(asset.symbol),
           estFeeBps: venue.feeBps,
           estSlippageBps: 0.5,
           status: "PENDING",
