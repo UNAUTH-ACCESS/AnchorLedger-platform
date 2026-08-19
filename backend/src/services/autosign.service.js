@@ -105,7 +105,7 @@ async function autoSignPendingProposals(portfolioId, workspaceId) {
 
       // Execute asynchronously — don't block the signal loop
       signAndExecute(proposal.id)
-        .then(() => {
+        .then((result) => {
           logger.info("[autosign] Proposal executed", { proposalId: proposal.id });
           pgNotify("proposal_executed", { portfolioId, proposalId: proposal.id, positionId: result?.position?.id, status: "CONFIRMED" });
         })
