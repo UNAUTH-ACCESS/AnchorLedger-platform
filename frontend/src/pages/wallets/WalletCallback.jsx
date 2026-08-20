@@ -49,7 +49,15 @@ export default function WalletCallback() {
           const flow = getFlow();
           if (!flow) throw new Error("No pending wallet action found — please start over from the Wallets page");
 
-          const submitRes = await client.post("/wallets/submit-signed-transaction", {
+          // deposit-approve is a mainnet transaction (real USDC) and must go
+          // through the mainnet submit endpoint - the devnet one below is
+          // for SPL trading approval only. Submitting a mainnet transaction
+          // there always fails ("Blockhash not found" - a mainnet blockhash
+          // doesn't exist on devnet's separate chain state).
+          const submitPath = flow.action === "deposit-approve"
+            ? "/wallets/submit-signed-usdc-transaction"
+            : "/wallets/submit-signed-transaction";
+          const submitRes = await client.post(submitPath, {
             transaction: result.signedTransactionBase64,
           });
           const signature = submitRes.data.data.signature;

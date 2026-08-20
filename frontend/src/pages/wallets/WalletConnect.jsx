@@ -7,6 +7,7 @@ import client from "../../api/client";
 import useAuthStore from "../../store/auth.store";
 import {
   getSession as getPhantomSession,
+  clearSession as clearPhantomSession,
   setFlow as setPhantomFlow,
   buildConnectUrl as buildPhantomConnectUrl,
   beginSigning as beginPhantomSigning,
@@ -625,17 +626,21 @@ export function DepositApprovalCard({ workspaceId, onApproved }) {
       // and at the deposit-approval endpoints instead of the trading ones.
       // returnTo makes sure a mobile user approving mid-onboarding lands
       // back in onboarding, not on the standalone Wallets page.
+      //
+      // Always clears any persisted session and reconnects fresh, rather
+      // than reusing one. This is a rare, one-time action (unlike trading
+      // approval, which benefits from skipping repeat connects) - the
+      // reliability cost of a stale/mismatched session silently failing
+      // to decrypt on Phantom's side (observed live: Phantom drops back to
+      // its own home screen with no error at all when this happens) is
+      // worse than the minor inconvenience of one extra connect step.
       if (!window.solana?.isPhantom && isMobileDevice()) {
         setStatus("approving");
-        const session = getPhantomSession();
+        clearPhantomSession();
         const flow = { action: "deposit-approve", walletId: walletId || null, capUSDC: 2000, returnTo: window.location.pathname };
-        if (session) {
-          await beginPhantomSigning(flow);
-        } else {
-          setPhantomFlow({ ...flow, stage: "connecting" });
-          window.location.href = buildPhantomConnectUrl({ cluster: "mainnet-beta" });
-        }
-        return; // navigates away either way - nothing after this runs
+        setPhantomFlow({ ...flow, stage: "connecting" });
+        window.location.href = buildPhantomConnectUrl({ cluster: "mainnet-beta" });
+        return; // navigates away - nothing after this runs
       }
 
       if (!window.solana?.isPhantom) {

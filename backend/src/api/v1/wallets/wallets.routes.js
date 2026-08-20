@@ -281,6 +281,23 @@ router.post("/submit-signed-transaction", authenticate, async (req, res, next) =
   } catch (err) { next(err); }
 });
 
+// POST /wallets/submit-signed-usdc-transaction
+// Body: { transaction: base64 signed tx }
+// The mainnet counterpart to /submit-signed-transaction above - for
+// deposit-sweep approval transactions specifically. A real, previously-
+// shipped bug had these routed through the devnet submit path above by
+// mistake, which always failed ("Blockhash not found" - a mainnet
+// blockhash doesn't exist on devnet's separate chain state, not a
+// timing/expiry issue as it first appeared to be).
+router.post("/submit-signed-usdc-transaction", authenticate, async (req, res, next) => {
+  try {
+    const { transaction } = req.body;
+    if (!transaction) throw new AppError("transaction (base64) is required", 400, "VALIDATION_ERROR");
+    const result = await delegatePost("/submit-signed-usdc-transaction", { transaction });
+    res.json({ success: true, data: { signature: result.signature } });
+  } catch (err) { next(err); }
+});
+
 // POST /wallets/:id/unlink-payload
 router.post("/:id/unlink-payload", authenticate, async (req, res, next) => {
   try {
