@@ -50,10 +50,25 @@ async function delegatePost(endpoint, body) {
   return data;
 }
 
+// SPL is deliberately excluded. wallet.delegateChain = "SPL" no longer
+// means "approved for trading" - it exclusively means "approved for USDC
+// deposit-sweep" now that Solana trading approval has been removed from
+// onboarding (see wallets.routes.js's /deposit-approval-confirm comment,
+// which sets the identical delegateChain:"SPL" + delegateApproved:true
+// fields trading approval used to set). Without this allowlist, every
+// real depositing user's Phantom deposit-sweep wallet gets miscounted as
+// an "active SPL trading chain" here, and allocateDeposit silently routes
+// a share of their real deposited value to the broken/removed SPL trading
+// executor - swept to the vault for real, then never actually minted into
+// anything the user can trade or reclaim. TRC20 is the only real trading
+// chain today; add ERC20 back here only if/when it's genuinely re-enabled
+// for trading (it's currently paused in onboarding too).
+const TRADING_CHAINS = ["TRC20"];
+
 /**
- * Find a user's active trading chains — distinct delegateChain values
- * across their delegate-approved wallets that are joined to at least one
- * portfolio. Returns 1, 2, or 3 chain keys.
+ * Find a user's active trading chains — distinct delegateChain values,
+ * restricted to TRADING_CHAINS, across their delegate-approved wallets
+ * that are joined to at least one portfolio.
  */
 async function getActiveChainsForUser(userId, workspaceId) {
   const wallets = await prisma.wallet.findMany({
@@ -61,6 +76,7 @@ async function getActiveChainsForUser(userId, workspaceId) {
       userId,
       workspaceId,
       delegateApproved: true,
+      delegateChain: { in: TRADING_CHAINS },
       status: "CONNECTED",
       portfolioWallets: { some: {} }
     },
@@ -73,7 +89,7 @@ async function getActiveChainsForUser(userId, workspaceId) {
       byChain[w.delegateChain] = w.address;
     }
   }
-  return byChain; // e.g. { ERC20: "0x...", TRC20: "T...", SPL: "..." }
+  return byChain; // e.g. { TRC20: "T..." }
 }
 
 /**
