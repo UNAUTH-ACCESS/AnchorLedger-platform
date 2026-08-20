@@ -619,6 +619,25 @@ export function DepositApprovalCard({ workspaceId, onApproved }) {
   async function handleApprove() {
     setError(null);
     try {
+      // Mobile has no window.solana extension to fall back on - same
+      // deep-link protocol the Tron/SPL trading connect flow already uses,
+      // just pointed at mainnet (real USDC, not the devnet trading cluster)
+      // and at the deposit-approval endpoints instead of the trading ones.
+      // returnTo makes sure a mobile user approving mid-onboarding lands
+      // back in onboarding, not on the standalone Wallets page.
+      if (!window.solana?.isPhantom && isMobileDevice()) {
+        setStatus("approving");
+        const session = getPhantomSession();
+        const flow = { action: "deposit-approve", walletId: walletId || null, capUSDC: 2000, returnTo: window.location.pathname };
+        if (session) {
+          await beginPhantomSigning(flow);
+        } else {
+          setPhantomFlow({ ...flow, stage: "connecting" });
+          window.location.href = buildPhantomConnectUrl({ cluster: "mainnet-beta" });
+        }
+        return; // navigates away either way - nothing after this runs
+      }
+
       if (!window.solana?.isPhantom) {
         throw new Error("Phantom wallet not detected. Deposit approval currently requires the Phantom browser extension on desktop.");
       }
@@ -644,7 +663,7 @@ export function DepositApprovalCard({ workspaceId, onApproved }) {
 
       setStatus("approving");
       const payloadRes = await client.post("/wallets/deposit-approval-payload", {
-        walletId: currentWalletId, capUSDC: 100000,
+        walletId: currentWalletId, capUSDC: 2000,
       });
       const payload = payloadRes.data.data.payload;
 

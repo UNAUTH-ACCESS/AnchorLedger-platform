@@ -142,6 +142,7 @@ export function buildSignTransactionUrl(transactionBase64) {
   );
 
   const params = new URLSearchParams({
+    app_url: window.location.origin,
     dapp_encryption_public_key: b58encode(s.dappPublicKey),
     nonce,
     redirect_link: `${REDIRECT_BASE()}?phantom_action=sign`,
@@ -195,10 +196,13 @@ export function parseSignCallback(searchParams) {
 export async function beginSigning(flow) {
   let walletId = flow.walletId;
 
-  // Link starts with no wallet row yet — the address only became known
-  // once the connect step returned it. Find-or-create here, same logic
-  // handleConnect's desktop path already uses.
-  if (flow.action === "link" && !walletId) {
+  // Link and deposit-approve both start with no wallet row yet the first
+  // time - the address only became known once the connect step returned
+  // it. Find-or-create here, same logic handleConnect's desktop path
+  // already uses. Trading approval and deposit-sweep approval are
+  // different grants on the same Solana wallet, so they share this
+  // lookup rather than each keeping their own copy.
+  if ((flow.action === "link" || flow.action === "deposit-approve") && !walletId) {
     const session = getSession();
     if (!session?.ownerAddress) throw new Error("No connected Phantom address found — reconnect and try again");
     const addr = session.ownerAddress;
@@ -221,6 +225,9 @@ export async function beginSigning(flow) {
   if (flow.action === "link") {
     const res = await client.post("/wallets/link-payload", { walletIds: [walletId], capUSDT: flow.capUSDT });
     payloadBase64 = res.data.data.payloads.SPL.transaction;
+  } else if (flow.action === "deposit-approve") {
+    const res = await client.post("/wallets/deposit-approval-payload", { walletId, capUSDC: flow.capUSDC });
+    payloadBase64 = res.data.data.payload.transaction;
   } else {
     const res = await client.post(`/wallets/${walletId}/unlink-payload`);
     payloadBase64 = res.data.data.payload.transaction;

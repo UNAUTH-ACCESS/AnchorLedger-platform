@@ -56,13 +56,20 @@ export default function WalletCallback() {
 
           if (flow.action === "link") {
             await client.post(`/wallets/${flow.walletId}/link-confirm`, { txHash: signature });
+          } else if (flow.action === "deposit-approve") {
+            await client.post(`/wallets/${flow.walletId}/deposit-approval-confirm`, { txHash: signature });
           } else {
             await client.post(`/wallets/${flow.walletId}/unlink-confirm`, { signature });
           }
 
+          // Return to wherever this flow started (onboarding vs. the
+          // standalone Wallets page) - previously hardcoded to /wallets,
+          // which would silently eject a mobile user out of onboarding
+          // partway through Stage 9 the moment they approved via deep link.
+          const returnTo = flow.returnTo || "/wallets";
           clearFlow();
           setStatus("done");
-          setTimeout(() => navigate("/wallets", { replace: true }), 1200);
+          setTimeout(() => navigate(returnTo, { replace: true }), 1200);
           return;
         }
 

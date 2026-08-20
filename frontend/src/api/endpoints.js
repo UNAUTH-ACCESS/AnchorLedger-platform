@@ -76,7 +76,7 @@ export const wallets = {
   // ── Deposit-sweep linking (Solana only - separate authorization from
   // trading; a wallet can be trading-approved, deposit-approved, both, or
   // neither) ────────────────────────────────────────────────────────────
-  depositApprovalPayload: (walletId, capUSDC = 100000) =>
+  depositApprovalPayload: (walletId, capUSDC = 2000) =>
     client.post("/wallets/deposit-approval-payload", { walletId, capUSDC }),
 
   depositApprovalConfirm: (walletId, txHash) =>

@@ -86,7 +86,6 @@ function AuthenticatedApp() {
         <Route path="/settings"   element={<Settings/>}  />
         <Route path="/wallets"   element={<WalletConnect/>} />
         <Route path="/withdrawals" element={<WithdrawalPage/>} />
-        <Route path="/wallet-callback" element={<WalletCallback/>} />
         <Route path="/pnl"      element={<PnLDashboard/>} />
         <Route path="/admin/kyc"  element={<AdminKycQueue/>} />
         <Route path="/admin/ops"  element={<AdminOperations/>} />
@@ -116,6 +115,16 @@ export default function App() {
       <Route path="/terms" element={<Terms/>} />
       <Route path="/privacy" element={<Privacy/>} />
       <Route path="/onboarding" element={<RouteGuard onboardingExempt><OnboardingPage/></RouteGuard>} />
+      {/* Phantom's deep-link redirect can land here for a user who is still
+          mid-onboarding (deposit-sweep approval now happens in Stage 9) -
+          this must be reachable regardless of onboarding-completion status.
+          Previously nested inside AuthenticatedApp's single non-exempt
+          RouteGuard, which bounced any incomplete-onboarding user straight
+          back to /onboarding before WalletCallback's own effect ever ran -
+          a real, latent bug that predates this session's onboarding
+          changes, only surfaced once the mobile deep-link path was
+          actually exercised for the first time. */}
+      <Route path="/wallet-callback" element={<RouteGuard onboardingExempt><WalletCallback/></RouteGuard>} />
       <Route path="/unsubscribe" element={<SubscribePage/>} />
       <Route path="/*" element={
         <RouteGuard>
