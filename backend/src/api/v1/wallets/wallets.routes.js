@@ -4,6 +4,7 @@ const { authenticate, requireWorkspace, requirePlatformAdmin, requirePlatformPer
 const { assertWalletAccess } = require("../../../middleware/ownership");
 const { AppError } = require("../../../middleware/error");
 const logger = require("../../../lib/logger");
+const { sendDepositApproved } = require("../../../services/lifecycle.service");
 
 const router = express.Router();
 
@@ -183,7 +184,7 @@ router.post("/:id/link-confirm", authenticate, requireKycApproved, async (req, r
 // Solana in this system (see depositWatcher.service.js's file header).
 router.post("/deposit-approval-payload", authenticate, requireKycApproved, async (req, res, next) => {
   try {
-    const { walletId, capUSDC = 100000 } = req.body;
+    const { walletId, capUSDC = 2000 } = req.body;
     const wallet = await assertWalletAccess(walletId, req.user.id);
     const walletWithChain = await prisma.wallet.findUnique({ where: { id: wallet.id }, include: { chain: true } });
     if (walletWithChain.chain?.type !== "SOLANA") {
@@ -256,6 +257,9 @@ router.post("/:id/deposit-approval-confirm", authenticate, requireKycApproved, a
         update: {},
       });
     }
+    // The real actionable moment: tell them exactly where to send USDC,
+    // now that the on-chain allowance is independently confirmed real.
+    sendDepositApproved(req.user.id, wallet.workspaceId, wallet.address).catch(() => {});
     res.json({ success: true, data: { linked: true } });
   } catch (err) { next(err); }
 });

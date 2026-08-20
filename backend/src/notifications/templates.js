@@ -143,7 +143,7 @@ function buildNotification(eventType, data = {}) {
         type:       "SYSTEM",
         priority:   PRIORITY.HIGH,
         title:      "✅ Identity verification approved",
-        body:       "Your identity verification has been approved. You now have full access to trading features.",
+        body:       "Your identity verification has been approved. Next: go to Wallets and connect TronLink (grants trading authority) and Phantom (for USDC deposits/withdrawals) - these are separate approvals. Once you send USDC, trading starts automatically.",
         entityId:   data.kycSubmissionId,
         entityType: "KycSubmission",
       };
@@ -154,8 +154,8 @@ function buildNotification(eventType, data = {}) {
         priority:   PRIORITY.HIGH,
         title:      "⚠️ Identity verification needs attention",
         body:       data.reviewNotes
-          ? `Your identity verification could not be approved: ${data.reviewNotes}`
-          : "Your identity verification could not be approved. Please review and resubmit your documents.",
+          ? `Your identity verification could not be approved: ${data.reviewNotes} - please review and resubmit your documents from the Identity Verification page.`
+          : "Your identity verification could not be approved. Please review and resubmit your documents from the Identity Verification page.",
         entityId:   data.kycSubmissionId,
         entityType: "KycSubmission",
       };

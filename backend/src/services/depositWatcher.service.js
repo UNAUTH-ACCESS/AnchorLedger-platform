@@ -18,6 +18,7 @@ const { Client } = require("pg");
 const prisma  = require("../lib/prisma");
 const logger  = require("../lib/logger");
 const config  = require("../lib/config");
+const { sendDepositComplete, sendDepositFailed } = require("./lifecycle.service");
 
 const SOLANA_DEPOSIT_VAULT = process.env.SOLANA_DEPOSIT_VAULT;
 
@@ -120,12 +121,14 @@ async function processDeposit(wallet) {
     }
   });
 
+  let vaulted = false;
   try {
     // 1. Sweep USDC → vault
     const sweep = await delegatePost("/sweep-usdc-deposit", {
       fromAddress: wallet.address,
       amountUSDC: usdcBalance
     });
+    vaulted = true;
 
     await prisma.deposit.update({
       where: { id: deposit.id },
@@ -182,6 +185,12 @@ async function processDeposit(wallet) {
       depositId: deposit.id, status, succeeded: allocation.summary.succeeded, failed: allocation.summary.failed
     });
 
+    if (status === "COMPLETE") {
+      sendDepositComplete(wallet.userId, wallet.workspaceId, { usdcAmount: usdcBalance }).catch(() => {});
+    } else {
+      sendDepositFailed(wallet.userId, wallet.workspaceId, { usdcAmount: usdcBalance, vaulted: true }).catch(() => {});
+    }
+
     return deposit;
 
   } catch (err) {
@@ -192,6 +201,7 @@ async function processDeposit(wallet) {
       where: { id: deposit.id },
       data: { status: "FAILED", errorMessage: err.message }
     });
+    sendDepositFailed(wallet.userId, wallet.workspaceId, { usdcAmount: usdcBalance, vaulted }).catch(() => {});
     return deposit;
   }
 }

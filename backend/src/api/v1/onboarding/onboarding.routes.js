@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../../../lib/prisma");
 const { authenticate, requireWorkspace } = require("../../../middleware/auth");
 const { AppError } = require("../../../middleware/error");
+const { sendOnboardingComplete } = require("../../../services/lifecycle.service");
 
 const router = express.Router();
 
@@ -116,6 +117,11 @@ router.post("/stage/:n", authenticate, requireWorkspace, async (req, res, next) 
           ipAddress:   req.ip,
         },
       });
+      // Bridges onboarding -> KYC, the next real step - a real user's
+      // whole path is decision-gated behind KYC approval from here (wallet
+      // connect, deposits), so this is the single most important "here's
+      // what to do next" moment to get right.
+      sendOnboardingComplete(req.user.id, workspaceId).catch(() => {});
     }
 
     await prisma.workspace.update({ where: { id: workspaceId }, data: { settings } });

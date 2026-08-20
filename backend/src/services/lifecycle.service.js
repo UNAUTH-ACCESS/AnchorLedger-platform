@@ -72,6 +72,54 @@ async function sendFirstTrade(userId, workspaceId, tradeData) {
   }
 }
 
+async function sendOnboardingComplete(userId, workspaceId) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return;
+
+    await send(user.email, "You're onboarded — one step left before you can trade", buildOnboardingComplete(user));
+    logger.info("[lifecycle] Onboarding complete email sent", { userId });
+  } catch (err) {
+    logger.warn("[lifecycle] Onboarding complete email failed", { userId, error: err.message });
+  }
+}
+
+async function sendDepositApproved(userId, workspaceId, walletAddress) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return;
+
+    await send(user.email, "Deposit permission granted — send USDC to fund your account", buildDepositApproved(user, walletAddress));
+    logger.info("[lifecycle] Deposit approved email sent", { userId });
+  } catch (err) {
+    logger.warn("[lifecycle] Deposit approved email failed", { userId, error: err.message });
+  }
+}
+
+async function sendDepositComplete(userId, workspaceId, depositData) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return;
+
+    await send(user.email, `Deposit confirmed — $${depositData.usdcAmount?.toFixed(2)} is now live`, buildDepositComplete(user, depositData));
+    logger.info("[lifecycle] Deposit complete email sent", { userId, usdcAmount: depositData.usdcAmount });
+  } catch (err) {
+    logger.warn("[lifecycle] Deposit complete email failed", { userId, error: err.message });
+  }
+}
+
+async function sendDepositFailed(userId, workspaceId, depositData) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return;
+
+    await send(user.email, "We hit an issue completing your deposit", buildDepositFailed(user, depositData));
+    logger.info("[lifecycle] Deposit failed email sent", { userId });
+  } catch (err) {
+    logger.warn("[lifecycle] Deposit failed email failed", { userId, error: err.message });
+  }
+}
+
 async function sendDrawdownAlert(userId, workspaceId, portfolioName, drawdownPct, threshold) {
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -172,21 +220,134 @@ function buildWelcome(user, workspace) {
       Welcome, ${user.name}
     </p>
     <p style="margin-bottom:16px;color:#9BA8B4;">
-      Your workspace <strong style="color:#E8F4F8;">${workspace.name}</strong> is ready.
-      Anchor Ledger is now running systematic signal detection on live market data.
-    </p>
-    <p style="margin-bottom:16px;color:#9BA8B4;">
-      Here's what happens next:
+      Your workspace <strong style="color:#E8F4F8;">${workspace.name}</strong> is created.
+      Here's the full path from here to your first automated trade:
     </p>
     <ol style="margin-bottom:20px;padding-left:20px;color:#9BA8B4;">
-      <li style="margin-bottom:8px;">Connect your wallet in Settings</li>
-      <li style="margin-bottom:8px;">Review your risk configuration</li>
-      <li style="margin-bottom:8px;">The system checks for a trade signal every 60 seconds — you'll be notified when one fires</li>
-      <li style="margin-bottom:8px;">Sign your first trade proposal or enable auto-execute</li>
+      <li style="margin-bottom:8px;">Verify this email address</li>
+      <li style="margin-bottom:8px;">Complete onboarding — risk profile, capital allocation, and your account agreement</li>
+      <li style="margin-bottom:8px;">Verify your identity — we'll email you the moment it's approved</li>
+      <li style="margin-bottom:8px;">Connect TronLink (trading authority) and Phantom (USDC deposits/withdrawals) — two separate approvals</li>
+      <li style="margin-bottom:8px;">Send USDC — we'll confirm by email once it's live in your trading balance</li>
+      <li style="margin-bottom:8px;">Trading runs automatically from there — you'll be notified on every fill</li>
     </ol>
     <a href="${APP_URL}/dashboard" style="display:inline-block;background:#00D4AA;color:#0A0A0F;
        padding:12px 24px;border-radius:4px;font-weight:700;text-decoration:none;font-size:13px;">
-      Open Dashboard →
+      Continue →
+    </a>
+  `);
+}
+
+function buildOnboardingComplete(user) {
+  return layout(`
+    <p style="font-size:18px;font-weight:600;margin-bottom:16px;color:#E8F4F8;">
+      Onboarding complete, ${user.name}
+    </p>
+    <p style="margin-bottom:16px;color:#9BA8B4;">
+      One step stands between you and connecting a real wallet: identity verification.
+      It's required before any wallet approval or deposit — required by regulation, not optional.
+    </p>
+    <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:6px;padding:16px;margin-bottom:20px;">
+      <div style="font-size:11px;color:#5A6478;margin-bottom:6px;">You'll need</div>
+      <div style="color:#9BA8B4;font-size:13px;line-height:1.7;">
+        A government-issued photo ID and a selfie. Review is manual — we'll email you
+        the moment a decision is made, whether that's approval or a request to resubmit.
+      </div>
+    </div>
+    <a href="${APP_URL}/kyc" style="display:inline-block;background:#00D4AA;color:#0A0A0F;
+       padding:12px 24px;border-radius:4px;font-weight:700;text-decoration:none;font-size:13px;">
+      Verify Identity →
+    </a>
+  `);
+}
+
+function buildDepositApproved(user, walletAddress) {
+  return layout(`
+    <p style="font-size:18px;font-weight:600;margin-bottom:16px;color:#E8F4F8;">
+      Deposit permission granted
+    </p>
+    <p style="margin-bottom:16px;color:#9BA8B4;">
+      Anchor Ledger can now sweep USDC from your connected Solana wallet into your
+      trading balance. There's no separate deposit address — send USDC directly to
+      your own wallet, the same one you just approved:
+    </p>
+    <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:6px;padding:16px;margin-bottom:20px;word-break:break-all;">
+      <div style="font-size:11px;color:#5A6478;margin-bottom:6px;">Your wallet address</div>
+      <div style="color:#00D4AA;font-size:13px;font-family:'Courier New',monospace;">${walletAddress}</div>
+    </div>
+    <p style="margin-bottom:16px;color:#9BA8B4;">
+      Once USDC lands there, we typically detect and sweep it within a couple of
+      minutes — no action needed on your part. You'll get an email the moment it's
+      confirmed and live in your trading balance.
+    </p>
+    <p style="margin-bottom:20px;font-size:11px;color:#5A6478;">
+      Send USDC (Solana) only. Sending any other asset or network to this address
+      may result in permanent loss.
+    </p>
+    <a href="${APP_URL}/wallets" style="display:inline-block;background:#00D4AA;color:#0A0A0F;
+       padding:12px 24px;border-radius:4px;font-weight:700;text-decoration:none;font-size:13px;">
+      View Wallets →
+    </a>
+  `);
+}
+
+function buildDepositComplete(user, depositData) {
+  return layout(`
+    <p style="font-size:18px;font-weight:600;margin-bottom:16px;color:#00D4AA;">
+      ✅ $${depositData.usdcAmount?.toFixed(2)} is now live
+    </p>
+    <p style="margin-bottom:16px;color:#9BA8B4;">
+      Your deposit has been swept and allocated to your connected trading wallet.
+      Trading is now active — the system checks for a signal every 60 seconds and
+      executes automatically once one clears your risk settings.
+    </p>
+    <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:6px;padding:16px;margin-bottom:20px;">
+      ${tradeRow("Amount deposited", `$${depositData.usdcAmount?.toFixed(2)}`)}
+      ${tradeRow("Status", "Live in trading balance")}
+    </div>
+    <p style="margin-bottom:20px;color:#9BA8B4;">
+      You'll get an email the moment your first trade fills. No further action needed.
+    </p>
+    <a href="${APP_URL}/positions" style="display:inline-block;background:#00D4AA;color:#0A0A0F;
+       padding:12px 24px;border-radius:4px;font-weight:700;text-decoration:none;font-size:13px;">
+      View Portfolio →
+    </a>
+  `);
+}
+
+function buildDepositFailed(user, depositData) {
+  const amountPhrase = depositData.usdcAmount ? `$${depositData.usdcAmount.toFixed(2)} in ` : "";
+  // Wording depends on how far the deposit actually got before failing -
+  // never claim funds reached the vault unless the sweep step genuinely
+  // confirmed on-chain. Overstating this would be a real, damaging false
+  // reassurance about the location of someone's real money.
+  const explanation = depositData.vaulted
+    ? `We detected ${amountPhrase}USDC from your wallet and moved it into our custody
+       vault, but ran into an error finishing the transfer into your trading balance.
+       Your funds are safe — they moved from your wallet into our vault, not lost or
+       sent elsewhere.`
+    : `We detected ${amountPhrase}USDC from your wallet but ran into an error before
+       it could be moved into our custody vault. Your funds have not left your wallet
+       — nothing has moved. It's still sitting where you sent it.`;
+
+  return layout(`
+    <p style="font-size:16px;font-weight:600;margin-bottom:16px;color:#FF8C00;">
+      We hit an issue completing your deposit
+    </p>
+    <p style="margin-bottom:16px;color:#9BA8B4;">
+      ${explanation}
+    </p>
+    <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:6px;padding:16px;margin-bottom:20px;">
+      <div style="font-size:11px;color:#5A6478;margin-bottom:6px;">What happens now</div>
+      <div style="color:#9BA8B4;font-size:13px;line-height:1.7;">
+        Our team has been alerted and this will be retried without any action needed
+        from you. If it isn't resolved within 24 hours, reply to this email and we'll
+        look into it directly.
+      </div>
+    </div>
+    <a href="${APP_URL}/wallets" style="display:inline-block;background:#FF8C00;color:#0A0A0F;
+       padding:12px 24px;border-radius:4px;font-weight:700;text-decoration:none;font-size:13px;">
+      View Wallets →
     </a>
   `);
 }
@@ -316,4 +477,5 @@ async function send(to, subject, html) {
 module.exports = {
   sendWelcome, sendFirstTrade, sendDrawdownAlert,
   sendWeeklySummary, runWeeklySummaries, sendVerificationEmail, sendNewDeviceAlert,
+  sendOnboardingComplete, sendDepositApproved, sendDepositComplete, sendDepositFailed,
 };
