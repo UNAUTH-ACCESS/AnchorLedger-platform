@@ -1,9 +1,75 @@
+import { Link } from "react-router-dom";
 import { useApi, usePolling } from "../../hooks/useApi";
-import { portfolios as portfoliosApi, proposals as proposalsApi, positions as positionsApi, audit as auditApi } from "../../api/endpoints";
+import { portfolios as portfoliosApi, proposals as proposalsApi, positions as positionsApi, audit as auditApi, wallets as walletsApi } from "../../api/endpoints";
 import { ErrorState, LoadingState, EmptyState } from "../../components/system/SystemStatus";
 import useSystemStore from "../../store/system.store";
 import { colors, regime as regimeMeta, statusMap } from "../../lib/tokens";
 import { fmt } from "../../lib/format";
+
+const CHAIN_LABELS = { SPL: "Solana", TRC20: "Tron", ERC20: "Ethereum" };
+
+// Same "your money, your control" fact the marketing site leads with, but
+// with the visitor's actual on-chain numbers instead of a demo slider —
+// approvedCap/remainingAllowance are DB fields synced from the chain by
+// the reconciliation job, not queried live on every render, so this shows
+// when that sync last ran rather than implying an instant on-chain read.
+function PermissionCard({ wallet }) {
+  const cap = wallet.approvedCap ?? 0;
+  const remaining = wallet.remainingAllowance ?? cap;
+  const used = Math.max(0, cap - remaining);
+  const usedPct = cap > 0 ? Math.min(100, (used / cap) * 100) : 0;
+
+  return (
+    <div style={{
+      background: colors.surface2, border: `1px solid ${colors.border2}`,
+      borderRadius: 6, padding: "12px 14px",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, color: colors.text }}>
+          {CHAIN_LABELS[wallet.delegateChain] || wallet.delegateChain}
+        </span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted }}>
+          {fmt.addr(wallet.address)}
+        </span>
+      </div>
+
+      <div style={{ height: 4, background: colors.border, borderRadius: 2, overflow: "hidden", marginBottom: 8 }}>
+        <div style={{ height: "100%", width: `${usedPct}%`, background: colors.green, borderRadius: 2 }} />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5 }}>
+        <span style={{ color: colors.muted }}>Used {fmt.usd(used)} / {fmt.usd(cap)}</span>
+        <span style={{ color: colors.green }}>{fmt.usd(remaining)} available</span>
+      </div>
+      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, color: colors.muted, marginTop: 6 }}>
+        Last verified on-chain: {fmt.ago(wallet.lastCheckedAt)}
+      </div>
+    </div>
+  );
+}
+
+function PermissionPanel({ wallets, loading }) {
+  if (loading) return <LoadingState rows={2} />;
+  if (!wallets || wallets.length === 0) {
+    return (
+      <EmptyState
+        message="No wallet linked yet"
+        sub={<Link to="/wallets" style={{ color: colors.green, textDecoration: "none" }}>Link a wallet to grant a capped, revocable trading permission →</Link>}
+      />
+    );
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 12 }}>
+      {wallets.map(w => <PermissionCard key={w.id} wallet={w} />)}
+      <Link to="/wallets" style={{
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: colors.muted,
+        textDecoration: "none", alignSelf: "flex-start",
+      }}>
+        Manage or revoke →
+      </Link>
+    </div>
+  );
+}
 
 function Metric({ label, value, sub, valueColor }) {
   return (
@@ -97,6 +163,7 @@ export default function Dashboard() {
   const { data: openPositions }                 = usePolling(() => positionsApi.list({ status: "OPEN" }), 30000);
   const { data: pendingProposals }              = usePolling(() => proposalsApi.list({ status: "PENDING", limit: 5 }), 30000);
   const { data: recentAudit }                   = usePolling(() => auditApi.notifications({ limit: 8 }), 60000);
+  const { data: delegateWallets, loading: loadingWallets } = usePolling(() => walletsApi.delegateStatus(), 60000);
 
   const portfolio   = portfolios?.[0];
   const nav         = portfolio?.latestSnapshot?.nav;
@@ -120,6 +187,14 @@ export default function Dashboard() {
         <Metric label="Unrealized P&L"  value={fmt.usd(unrealized)} valueColor={unrealized >= 0 ? colors.green : colors.red}/>
         <Metric label="Open Positions"  value={openPositions?.length ?? "—"} sub="Active"/>
         <Metric label="Pending Proposals" value={pendingProposals?.proposals?.length ?? "—"} sub="Awaiting signature" valueColor={colors.violet}/>
+      </div>
+
+      {/* Permission — the non-custodial pitch, with your real numbers */}
+      <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 6 }}>
+        <div style={{ padding: "10px 16px", borderBottom: `1px solid ${colors.border}` }}>
+          <span style={{ fontSize: 11, color: colors.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Your Permission</span>
+        </div>
+        <PermissionPanel wallets={delegateWallets} loading={loadingWallets} />
       </div>
 
       {/* NAV chart + Regime */}
