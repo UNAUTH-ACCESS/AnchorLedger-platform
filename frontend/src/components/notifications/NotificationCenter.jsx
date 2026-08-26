@@ -167,8 +167,15 @@ export default function NotificationCenter() {
       {/* Panel */}
       {open && (
         <div style={{
-          position:   "absolute", top: 44, right: 0,
-          width:      360, maxHeight: 500,
+          // Fixed to the viewport, not absolute relative to the bell button -
+          // "right: 0" relative to the trigger meant the panel's left edge
+          // could land off-screen any time the button itself wasn't flush
+          // against the topbar's right edge (true on mobile even before the
+          // drawer - Clock/SystemStatus sit to its right - but the new
+          // hamburger button crowding the topbar further made it visible).
+          // width: min(...) keeps it from ever exceeding the viewport.
+          position:   "fixed", top: 52, right: 8,
+          width:      "min(360px, calc(100vw - 16px))", maxHeight: "min(500px, calc(100vh - 64px))",
           background: colors.surface,
           border:     `1px solid ${colors.border2}`,
           borderRadius: 8, zIndex: 300,

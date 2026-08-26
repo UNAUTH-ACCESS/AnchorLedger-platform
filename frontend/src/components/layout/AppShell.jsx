@@ -211,6 +211,7 @@ function BottomNav() {
 
 export function AppShell({ children }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
@@ -218,9 +219,40 @@ export function AppShell({ children }) {
     return () => window.removeEventListener("resize", handler);
   }, []);
 
+  // BottomNav only fits 5 shortcuts - Audit Log, Wallets, Withdrawals and
+  // P&L have no other route in on mobile without this. Closes itself via
+  // Sidebar's existing onNav prop (already there for exactly this) so
+  // tapping a link doesn't leave the drawer open over the new page.
+  useEffect(() => {
+    if (!isMobile) setDrawerOpen(false);
+  }, [isMobile]);
+
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: colors.bg }}>
       {!isMobile && <Sidebar />}
+
+      {isMobile && drawerOpen && (
+        <div
+          onClick={() => setDrawerOpen(false)}
+          style={{
+            position: "fixed", inset: 0,
+            background: "#00000099",
+            zIndex: 199,
+          }}
+        />
+      )}
+      {isMobile && (
+        <div style={{
+          position: "fixed", top: 0, bottom: 0, left: 0,
+          zIndex: 200,
+          transform: drawerOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.22s ease",
+          boxShadow: drawerOpen ? "2px 0 16px #00000066" : "none",
+        }}>
+          <Sidebar onNav={() => setDrawerOpen(false)}/>
+        </div>
+      )}
+
       <div style={{
         flex: 1, display: "flex", flexDirection: "column",
         overflow: "hidden", minWidth: 0,
@@ -234,13 +266,27 @@ export function AppShell({ children }) {
           padding: "0 16px", gap: 12,
         }}>
           {isMobile && (
-            <div style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
-              color: colors.green,
-            }}>
-              AL
-            </div>
+            <>
+              <button
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Open menu"
+                style={{
+                  background: "transparent", border: "none",
+                  color: colors.text, fontSize: 18,
+                  padding: "4px 6px", margin: "-4px -6px 0 -8px",
+                  cursor: "pointer", lineHeight: 1,
+                }}
+              >
+                ☰
+              </button>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+                color: colors.green,
+              }}>
+                AL
+              </div>
+            </>
           )}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
             <NotificationCenter/>
