@@ -1,57 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { colors, regime as regimeMeta } from "../../lib/tokens";
 import client from "../../api/client";
-
-// Lightweight scroll fade-up, no animation library — matches "subtle
-// scroll-based fade-up only, no other animation" from the design brief.
-function useFadeUp() {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
-      { threshold: 0.15 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return [ref, visible];
-}
-
-function FadeUp({ children, style }) {
-  const [ref, visible] = useFadeUp();
-  return (
-    <div
-      ref={ref}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(16px)",
-        transition: "opacity 0.6s ease, transform 0.6s ease",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-const wrap = { maxWidth: 720, margin: "0 auto", padding: "0 20px" };
-
-function Eyebrow({ children }) {
-  return (
-    <div style={{
-      fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: colors.green,
-      letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 16,
-    }}>
-      {children}
-    </div>
-  );
-}
+import { FadeUp, wrap, Eyebrow, MarketingHeader, MarketingFooter } from "../../components/marketing/MarketingChrome";
 
 function QAItem({ n, question, punch, body }) {
   return (
@@ -256,15 +207,7 @@ export default function HomePage() {
   return (
     <div style={{ background: colors.bg, color: colors.text, fontFamily: "'Inter', sans-serif", minHeight: "100vh" }}>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div style={{ padding: "20px 20px 0" }}>
-        <div style={{ ...wrap, padding: 0, display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 20, height: 20, background: colors.green, clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }} />
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, letterSpacing: "0.08em" }}>
-            Anchor Ledger
-          </span>
-        </div>
-      </div>
+      <MarketingHeader current="/" />
 
       {/* ── Hero ───────────────────────────────────────────────────────── */}
       <div style={{ ...wrap, padding: "64px 20px 56px" }}>
@@ -391,6 +334,12 @@ export default function HomePage() {
           <div style={{ fontSize: 11, color: colors.muted, marginTop: 8, fontStyle: "italic" }}>
             No shield icons. No "bank-grade" claims. Just what's actually true.
           </div>
+          <Link to="/security" style={{
+            display: "inline-block", marginTop: 16, fontSize: 12, color: colors.green,
+            fontFamily: "'JetBrains Mono', monospace", textDecoration: "none",
+          }}>
+            Full security & audit practices →
+          </Link>
         </FadeUp>
       </div>
 
@@ -455,6 +404,12 @@ export default function HomePage() {
           <div style={{ fontSize: 11, color: colors.muted, marginTop: 12, fontStyle: "italic" }}>
             As each chain goes live, this page updates — you'll always know exactly where things stand.
           </div>
+          <Link to="/architecture" style={{
+            display: "inline-block", marginTop: 16, fontSize: 12, color: colors.green,
+            fontFamily: "'JetBrains Mono', monospace", textDecoration: "none",
+          }}>
+            How approval & execution actually work, chain by chain →
+          </Link>
         </FadeUp>
       </div>
 
@@ -478,24 +433,7 @@ export default function HomePage() {
         </FadeUp>
       </div>
 
-      {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${colors.border}` }}>
-        <div style={{ ...wrap, padding: "28px 20px", display: "flex", gap: 20, flexWrap: "wrap" }}>
-          {[
-            ["Terms of Service", "/terms"],
-            ["Privacy Policy", "/privacy"],
-            ["Contact", "mailto:hello@anchorledger.io"],
-          ].map(([label, href]) => (
-            <a
-              key={label}
-              href={href}
-              style={{ fontSize: 11, color: colors.muted, textDecoration: "none", fontFamily: "'JetBrains Mono', monospace" }}
-            >
-              {label}
-            </a>
-          ))}
-        </div>
-      </div>
+      <MarketingFooter />
     </div>
   );
 }

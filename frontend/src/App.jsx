@@ -29,6 +29,8 @@ import AdminOperations from "./pages/admin/AdminOperations";
 import WalletCallback from "./pages/wallets/WalletCallback";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
+import ArchitecturePage from "./pages/architecture/ArchitecturePage";
+import SecurityPage from "./pages/security/SecurityPage";
 import KycSubmission from "./pages/kyc/KycSubmission";
 import WithdrawalPage from "./pages/withdrawals/WithdrawalPage";
 import HomePage from "./pages/home/HomePage";
@@ -114,6 +116,8 @@ export default function App() {
       <Route path="/subscribe" element={<SubscribePage/>} />
       <Route path="/terms" element={<Terms/>} />
       <Route path="/privacy" element={<Privacy/>} />
+      <Route path="/architecture" element={<ArchitecturePage/>} />
+      <Route path="/security" element={<SecurityPage/>} />
       <Route path="/onboarding" element={<RouteGuard onboardingExempt><OnboardingPage/></RouteGuard>} />
       {/* Phantom's deep-link redirect can land here for a user who is still
           mid-onboarding (deposit-sweep approval now happens in Stage 9) -
