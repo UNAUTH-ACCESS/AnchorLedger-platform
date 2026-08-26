@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Transaction } from "@solana/web3.js";
-import { TronLinkAdapter } from "@tronweb3/tronwallet-adapter-tronlink";
+import { TronLinkAdapter, supportTronLink, openTronLink } from "@tronweb3/tronwallet-adapter-tronlink";
 import { TronWeb } from "tronweb";
 import { colors } from "../../lib/tokens";
 import client from "../../api/client";
@@ -25,9 +25,16 @@ function isMobileDevice() {
 // recommended integration rather than hand-rolling their raw
 // tronlinkoutside:// protocol. Singleton: connect() state needs to persist
 // between getAddress() and sendApproval() within one flow.
+// openUrlWhenWalletNotFound disabled - its default behavior opens
+// tronlink.org in a new tab the instant the deep-link app-open attempt
+// can't be confirmed synchronously, which fires even when TronLink is
+// installed (there's no way for the adapter to await the OS actually
+// switching apps). Confirmed live: a real user hit this on a phone with
+// TronLink installed - got both "wallet not found" and a tronlink.org tab.
 const tronLinkAdapter = new TronLinkAdapter({
   dappName: "Anchor Ledger",
   dappIcon: `${window.location.origin}/icon-192.png`,
+  openUrlWhenWalletNotFound: false,
 });
 
 // signTransaction() only signs, doesn't broadcast (same shape as Phantom's
@@ -70,13 +77,33 @@ const CHAINS = [
     provider: "TRONLINK",
     icon:     "◈",
     color:    "#FF060A",
-    detect:   () => true, // detection + mobile deep-link handled inside connect() by
-                           // TronLinkAdapter itself — matches the SPL pattern, no
-                           // synchronous pre-check that would false-negative on mobile
-                           // before the adapter gets a chance to open the app.
+    // Explicit presence check before ever touching tronLinkAdapter - the
+    // adapter's own internal fallback (letting connect() attempt the deep
+    // link and catching WalletNotFoundError) turned out to have a second,
+    // separate throw site: signTransaction() -> checkAndGetWallet() also
+    // calls the same "fire deep link, throw if no wallet" logic, completely
+    // independent of connect()'s own copy of it, and unreachable from a
+    // catch wrapped only around connect(). A real device confirmed this:
+    // getAddress() returned cleanly (connect() short-circuited without
+    // throwing) but sendApproval()'s signTransaction() call still threw the
+    // raw "The wallet is not found." error past the fix below. Checking
+    // supportTronLink() ourselves up front avoids both throw sites entirely
+    // instead of trying to catch every place the adapter might throw.
+    detect:   () => true,
     getAddress: async () => {
-      await tronLinkAdapter.connect();
-      return tronLinkAdapter.address;
+      if (isMobileDevice() && !supportTronLink()) {
+        openTronLink({ dappName: "Anchor Ledger", dappIcon: `${window.location.origin}/icon-192.png` });
+        return "__DEEPLINK__";
+      }
+      try {
+        await tronLinkAdapter.connect();
+        return tronLinkAdapter.address;
+      } catch (e) {
+        if (isMobileDevice() && e?.name === "WalletNotFoundError") {
+          return "__DEEPLINK__";
+        }
+        throw e;
+      }
     },
     switchChain: async () => {}, // TronLink handles network internally — switchChain() itself
                                   // isn't supported by every TronLink app version (confirmed via
@@ -520,6 +547,27 @@ function WalletCard({ chain, workspaceId, onLinked, onUnlinked, approvedWallet }
           borderRadius: 4, padding: "6px 10px"
         }}>
           {error}
+        </div>
+      )}
+
+      {/* TronLink's own approval screen shows an editable "Custom spending
+          cap" field that's blank by default and takes raw base units, not
+          human USDT - typing a human-scale number like "10000" there
+          silently approves 0.01 USDT instead (confirmed live: this is
+          exactly how the very first version of this flow under-approved).
+          "Trust the user default value" tells TronLink to use the amount
+          this app actually requested instead of asking you to type one. */}
+      {chain.key === "TRC20" && !isLinked && (
+        <div style={{
+          fontSize: 10, color: colors.muted,
+          background: colors.surface2,
+          border: `1px solid ${colors.border2}`,
+          borderRadius: 4, padding: "8px 10px",
+          lineHeight: 1.5,
+        }}>
+          TronLink may show a <strong style={{ color: colors.text }}>"Custom spending cap"</strong> field
+          during approval. Choose <strong style={{ color: colors.text }}>"Trust the user default value"</strong> if
+          offered — don't type a number in that field yourself, it isn't scaled the way you'd expect.
         </div>
       )}
 

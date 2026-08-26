@@ -154,6 +154,20 @@ router.post("/:id/link-confirm", authenticate, requireKycApproved, async (req, r
         400, "DELEGATE_NOT_APPROVED"
       );
     }
+    // Catches an approval that landed on-chain but for far less than requested
+    // (observed live: a TronLink mobile in-app-browser approval confirmed
+    // on-chain at 0.01 USDT instead of the 10000 USDT cap actually sent and
+    // signed — allowanceValue > 0 alone let that through). MIN_TRADING_ALLOWANCE_USDT
+    // is well below any real per-trade size, so a legitimate lower custom cap still
+    // passes; only a catastrophically wrong approval (like the 10^6-off case) trips it.
+    const MIN_TRADING_ALLOWANCE_USDT = 100;
+    if (allowanceValue < MIN_TRADING_ALLOWANCE_USDT) {
+      throw new AppError(
+        `On-chain allowance confirmed but far below what real trading requires ($${allowanceValue} — expected at least $${MIN_TRADING_ALLOWANCE_USDT}). ` +
+        `The approval transaction landed but the wallet's confirmation app appears to have signed a different amount than requested. Please revoke and re-approve.`,
+        400, "DELEGATE_ALLOWANCE_TOO_LOW"
+      );
+    }
     await prisma.wallet.update({
       where: { id: wallet.id },
       data: { delegateApproved: true, delegateChain: chainKey, linkTxHash: txHash, verifiedAt: new Date() },
