@@ -90,7 +90,7 @@ export function LegalLayout({ title, effectiveDate, operator, children }) {
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, fontFamily: "'Inter', sans-serif" }}>
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px 80px" }}>
-        <a href="/" style={{
+        <a href="/home" style={{
           display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 40, textDecoration: "none",
         }}>
           <div style={{
@@ -121,7 +121,7 @@ export function LegalLayout({ title, effectiveDate, operator, children }) {
           marginTop: 40, paddingTop: 20, borderTop: `1px solid ${colors.border}`,
           fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: colors.muted,
         }}>
-          <a href="/" style={{ color: colors.green, textDecoration: "none" }}>← Back to Anchor Ledger</a>
+          <a href="/home" style={{ color: colors.green, textDecoration: "none" }}>← Back to Anchor Ledger</a>
         </div>
       </div>
     </div>

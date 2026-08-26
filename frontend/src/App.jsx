@@ -108,6 +108,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<RootRoute/>} />
+      {/* Unconditional — RootRoute above redirects an authenticated session
+          straight to /dashboard, so a logged-in user (or a link shared from
+          one) needs a stable URL that always shows the marketing homepage. */}
+      <Route path="/home" element={<HomePage/>} />
       <Route path="/login" element={<LoginPage/>} />
       <Route path="/signup" element={<SignupPage/>} />
       <Route path="/verify-email" element={<VerifyEmailPage/>} />

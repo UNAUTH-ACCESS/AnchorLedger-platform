@@ -63,7 +63,10 @@ export function MarketingHeader({ current }) {
   return (
     <div style={{ padding: "20px 20px 0" }}>
       <div style={{ ...wrap, padding: 0, display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" }}>
-        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+        {/* /home, not / — / redirects an authenticated session to /dashboard,
+            which would make the logo unusable as a "back to homepage" link
+            for anyone logged in. /home always renders the homepage. */}
+        <Link to="/home" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <div style={{ width: 20, height: 20, background: colors.green, clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }} />
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, letterSpacing: "0.08em", color: colors.text }}>
             Anchor Ledger
