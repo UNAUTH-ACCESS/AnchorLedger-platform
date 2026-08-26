@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { colors } from "../../lib/tokens";
+import { colors, regime as regimeMeta } from "../../lib/tokens";
+import client from "../../api/client";
 
 // Lightweight scroll fade-up, no animation library — matches "subtle
 // scroll-based fade-up only, no other animation" from the design brief.
@@ -70,29 +71,72 @@ function QAItem({ n, question, punch, body }) {
   );
 }
 
+// Interactive, but honest: dragging the slider doesn't call the backend or
+// simulate a fake trade - it just recomputes the same diagram a real
+// approval produces, so a visitor can see their own number in the actual
+// permission structure instead of trusting a fixed $10,000 example.
 function PermissionDiagram() {
+  const [cap, setCap] = useState(10000);
+  const [revoked, setRevoked] = useState(false);
   const line = { display: "flex", justifyContent: "space-between", gap: 16, padding: "6px 0" };
   const key = { color: colors.muted };
   const val = { color: colors.text };
+
   return (
-    <div style={{
-      background: colors.surface, border: `1px solid ${colors.border2}`,
-      borderRadius: 6, padding: "20px 24px",
-      fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5,
-      boxShadow: "0 0 0 1px rgba(0,212,170,0.04)",
-    }}>
-      <div style={{ color: colors.text, fontWeight: 700, letterSpacing: "0.04em", marginBottom: 4 }}>
-        PERMISSION GRANTED
+    <div>
+      <div style={{
+        background: colors.surface, border: `1px solid ${colors.border2}`,
+        borderRadius: 6, padding: "20px 24px",
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5,
+        boxShadow: "0 0 0 1px rgba(0,212,170,0.04)",
+        opacity: revoked ? 0.5 : 1, transition: "opacity 0.25s",
+      }}>
+        <div style={{ color: colors.text, fontWeight: 700, letterSpacing: "0.04em", marginBottom: 4 }}>
+          {revoked ? "PERMISSION REVOKED" : "PERMISSION GRANTED"}
+        </div>
+        <div style={line}><span style={key}>├─ Spender:</span><span style={val}>Anchor Ledger Delegate</span></div>
+        <div style={line}><span style={key}>├─ Asset:</span><span style={val}>USDC</span></div>
+        <div style={line}><span style={key}>├─ Max Amount:</span><span style={val}>${cap.toLocaleString()}.00</span></div>
+        <div style={line}><span style={key}>├─ Used:</span><span style={val}>$0.00</span></div>
+        <div style={line}>
+          <span style={key}>├─ Status:</span>
+          {revoked
+            ? <span style={{ color: colors.muted }}>○ Inactive</span>
+            : <span style={{ color: colors.green }}>● Active</span>}
+        </div>
+        <div style={line}><span style={key}>└─ Revoke:</span><span style={val}>instant · on-chain · anytime</span></div>
       </div>
-      <div style={line}><span style={key}>├─ Spender:</span><span style={val}>Anchor Ledger Delegate</span></div>
-      <div style={line}><span style={key}>├─ Asset:</span><span style={val}>USDC</span></div>
-      <div style={line}><span style={key}>├─ Max Amount:</span><span style={val}>$10,000.00</span></div>
-      <div style={line}><span style={key}>├─ Used:</span><span style={val}>$0.00</span></div>
-      <div style={line}>
-        <span style={key}>├─ Status:</span>
-        <span style={{ color: colors.green }}>● Active</span>
+
+      <div style={{ marginTop: 16, opacity: revoked ? 0.5 : 1, transition: "opacity 0.25s" }}>
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          fontSize: 11, color: colors.muted, marginBottom: 8,
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          <span>Try your own cap</span>
+          <span style={{ color: colors.text }}>${cap.toLocaleString()}</span>
+        </div>
+        <input
+          type="range" min={100} max={50000} step={100} value={cap}
+          disabled={revoked}
+          onChange={(e) => setCap(Number(e.target.value))}
+          style={{ width: "100%", accentColor: colors.green, cursor: revoked ? "default" : "pointer" }}
+        />
       </div>
-      <div style={line}><span style={key}>└─ Revoke:</span><span style={val}>instant · on-chain · anytime</span></div>
+
+      <button
+        onClick={() => setRevoked(r => !r)}
+        style={{
+          marginTop: 14, background: "transparent",
+          border: `1px solid ${revoked ? colors.green : colors.border2}`,
+          borderRadius: 4, padding: "8px 14px",
+          color: revoked ? colors.green : colors.muted,
+          fontSize: 11, fontFamily: "'JetBrains Mono', monospace",
+          fontWeight: 600, letterSpacing: "0.04em", cursor: "pointer",
+        }}
+      >
+        {revoked ? "↺ Re-grant (demo)" : "⨯ Revoke this permission (try it)"}
+      </button>
     </div>
   );
 }
@@ -129,26 +173,86 @@ function SecurityItem({ children }) {
 }
 
 function FAQItem({ question, answer }) {
+  const [open, setOpen] = useState(false);
   return (
-    <FadeUp style={{ marginBottom: 28 }}>
-      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{question}</h3>
-      <p style={{ fontSize: 13, color: colors.muted, lineHeight: 1.7, margin: 0 }}>{answer}</p>
+    <FadeUp style={{ marginBottom: 12 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", textAlign: "left", background: "transparent",
+          border: "none", borderBottom: `1px solid ${colors.border}`,
+          padding: "14px 0", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+        }}
+      >
+        <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: colors.text }}>{question}</h3>
+        <span style={{
+          fontSize: 14, color: open ? colors.green : colors.muted,
+          transform: open ? "rotate(45deg)" : "none",
+          transition: "transform 0.2s", flexShrink: 0,
+        }}>
+          +
+        </span>
+      </button>
+      <div style={{
+        maxHeight: open ? 240 : 0, overflow: "hidden",
+        transition: "max-height 0.25s ease",
+      }}>
+        <p style={{ fontSize: 13, color: colors.muted, lineHeight: 1.7, margin: "12px 0 20px" }}>{answer}</p>
+      </div>
     </FadeUp>
   );
 }
 
-function ChainStatus({ label, dot, statusLabel }) {
-  const filled = dot === "filled";
+function ChainStatus({ label, role, live }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
-      <span style={{ color: filled ? colors.green : colors.muted }}>{filled ? "●" : "○"}</span>
+      <span style={{ color: live ? colors.green : colors.muted }}>{live ? "●" : "○"}</span>
       <span style={{ color: colors.text }}>{label}</span>
-      <span style={{ color: colors.muted }}>{statusLabel}</span>
+      <span style={{ color: colors.muted }}>{live ? role : "Planned"}</span>
+    </div>
+  );
+}
+
+// Real numbers only - fetched from /marketing/stats, which queries the
+// actual signal + regime tables. If the request fails or hasn't resolved
+// yet, the bar just doesn't render rather than showing a placeholder
+// number that could be mistaken for a real one.
+function LiveStatsBar({ stats }) {
+  if (!stats) return null;
+  const regime = stats.currentRegime && regimeMeta[stats.currentRegime.state];
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: "10px 24px", alignItems: "center",
+      background: colors.surface, border: `1px solid ${colors.border2}`,
+      borderRadius: 6, padding: "12px 18px",
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <span style={{ color: colors.green }}>●</span>
+        <span style={{ color: colors.text }}>{stats.totalSignals.toLocaleString()}</span>
+        <span style={{ color: colors.muted }}>signals generated to date</span>
+      </div>
+      {regime && (
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ color: regime.color }}>●</span>
+          <span style={{ color: colors.text }}>{regime.label}</span>
+          <span style={{ color: colors.muted }}>current market regime</span>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function HomePage() {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    client.get("/marketing/stats")
+      .then(res => setStats(res.data.data))
+      .catch(() => {}); // page reads fine with no live bar if this fails
+  }, []);
+
   return (
     <div style={{ background: colors.bg, color: colors.text, fontFamily: "'Inter', sans-serif", minHeight: "100vh" }}>
 
@@ -173,6 +277,9 @@ export default function HomePage() {
             Not custody. Not a deposit. A scoped, revocable authority — visible on-chain,
             limited to an amount you set, gone the moment you say so.
           </p>
+          <div style={{ marginBottom: 32 }}>
+            <LiveStatsBar stats={stats} />
+          </div>
           <Link to="/signup" style={{ textDecoration: "none" }}>
             <button style={{
               background: colors.green, color: colors.bg, border: "none", borderRadius: 4,
@@ -297,7 +404,7 @@ export default function HomePage() {
 
         <FAQItem
           question="Which chains are supported?"
-          answer="Solana is live today. Ethereum and Tron support is being rolled out in stages — see the roadmap below."
+          answer="Solana handles deposits and withdrawals; Tron is where trade execution actually happens — both live today. Ethereum support is planned next, see the roadmap below."
         />
         <FAQItem
           question="What does identity verification actually involve?"
@@ -305,7 +412,7 @@ export default function HomePage() {
         />
         <FAQItem
           question="Is there a minimum deposit?"
-          answer="Yes — $500 USDC."
+          answer="No large minimum to worry about — start with whatever amount you're comfortable with."
         />
         <FAQItem
           question="How do I withdraw funds?"
@@ -335,9 +442,15 @@ export default function HomePage() {
             background: colors.surface, border: `1px solid ${colors.border2}`,
             borderRadius: 6, padding: "16px 20px",
           }}>
-            <ChainStatus label="Solana" dot="filled" statusLabel="Live" />
-            <ChainStatus label="Ethereum" dot="hollow" statusLabel="Planned" />
-            <ChainStatus label="Tron" dot="hollow" statusLabel="Live" />
+            {stats?.chains
+              ? Object.values(stats.chains).map(c => (
+                  <ChainStatus key={c.label} label={c.label} role={c.role} live={c.live} />
+                ))
+              : ["Solana", "Tron", "Ethereum"].map(label => (
+                  <span key={label} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: colors.muted }}>
+                    {label} …
+                  </span>
+                ))}
           </div>
           <div style={{ fontSize: 11, color: colors.muted, marginTop: 12, fontStyle: "italic" }}>
             As each chain goes live, this page updates — you'll always know exactly where things stand.

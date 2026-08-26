@@ -2,8 +2,44 @@ const express = require("express");
 const { authenticate, requirePlatformAdmin } = require("../../../middleware/auth");
 const { AppError } = require("../../../middleware/error");
 const { subscribe, unsubscribe, getSubscribers, sendCampaign } = require("../../../services/marketing.service");
+const prisma = require("../../../lib/prisma");
 
 const router = express.Router();
+
+// Single declared source of truth for what's actually live, per chain -
+// the public landing page had drifted from this (showed Tron as "planned"
+// when it's the only live trading venue, Solana as the trading chain when
+// it's deposit/withdrawal-only) because the same facts were hand-copied
+// into page JSX with no link back to reality. Pulling this from the API
+// instead means the page can't silently go stale again the way it just did.
+const CHAIN_STATUS = {
+  SPL:   { label: "Solana",   role: "Deposits & withdrawals", live: true  },
+  TRC20: { label: "Tron",     role: "Trade execution",        live: true  },
+  ERC20: { label: "Ethereum", role: "Trade execution",        live: false },
+};
+
+// GET /marketing/stats — public, no auth. Real, currently-true numbers only -
+// no vanity metrics that aren't backed by an actual query.
+router.get("/stats", async (req, res, next) => {
+  try {
+    const [totalSignals, regime] = await Promise.all([
+      prisma.signal.count(),
+      prisma.regimeState.findFirst({
+        where: { validTo: null },
+        orderBy: { validFrom: "desc" },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalSignals,
+        currentRegime: regime ? { state: regime.state, confidence: regime.confidence } : null,
+        chains: CHAIN_STATUS,
+      },
+    });
+  } catch (err) { next(err); }
+});
 
 // POST /marketing/subscribe — public endpoint
 router.post("/subscribe", async (req, res, next) => {
