@@ -36,6 +36,8 @@ import SecurityPage from "./pages/security/SecurityPage";
 import KycSubmission from "./pages/kyc/KycSubmission";
 import WithdrawalPage from "./pages/withdrawals/WithdrawalPage";
 import HomePage from "./pages/home/HomePage";
+import BlogIndex from "./pages/blog/BlogIndex";
+import BlogPost from "./pages/blog/BlogPost";
 
 function RootRoute() {
   const { status } = useAuthStore();
@@ -133,6 +135,8 @@ export default function App() {
       <Route path="/privacy" element={<Privacy/>} />
       <Route path="/architecture" element={<ArchitecturePage/>} />
       <Route path="/security" element={<SecurityPage/>} />
+      <Route path="/blog" element={<BlogIndex/>} />
+      <Route path="/blog/:slug" element={<BlogPost/>} />
       <Route path="/onboarding" element={<RouteGuard onboardingExempt><OnboardingPage/></RouteGuard>} />
       {/* Phantom's deep-link redirect can land here for a user who is still
           mid-onboarding (deposit-sweep approval now happens in Stage 9) -

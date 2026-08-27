@@ -23,6 +23,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { posts } from "../src/content/posts.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(__dirname, "..", "dist");
@@ -102,6 +103,31 @@ const ROUTES = [
     description: "How Anchor Ledger collects, uses, and protects your data.",
     jsonld: [ORG_JSONLD],
   },
+  {
+    path: "/blog",
+    title: "Blog — Anchor Ledger",
+    description: "Notes on how Anchor Ledger actually works — architecture, security, and honest updates on what's shipped.",
+    jsonld: [ORG_JSONLD],
+  },
+  // One route per post, generated from the same data BlogPost.jsx renders -
+  // adding a post to content/posts.js is enough for it to get its own
+  // correct title/description/OG/Article JSON-LD with no other change.
+  ...posts.map(post => ({
+    path: `/blog/${post.slug}`,
+    title: `${post.title} — Anchor Ledger`,
+    description: post.description,
+    ogType: "article",
+    publishedTime: post.date,
+    jsonld: [ORG_JSONLD, {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: post.title,
+      description: post.description,
+      datePublished: post.date,
+      author: { "@type": "Organization", name: "Anchor Ledger" },
+      url: `${SITE_URL}/blog/${post.slug}`,
+    }],
+  })),
 ];
 
 function buildHead(template, route) {
@@ -119,7 +145,7 @@ function buildHead(template, route) {
   const tags = [
     `<link rel="canonical" href="${canonical}" />`,
     `<meta name="robots" content="${robots}" />`,
-    `<meta property="og:type" content="website" />`,
+    `<meta property="og:type" content="${route.ogType || "website"}" />`,
     `<meta property="og:site_name" content="Anchor Ledger" />`,
     `<meta property="og:title" content="${route.title}" />`,
     `<meta property="og:description" content="${route.description}" />`,
@@ -127,6 +153,7 @@ function buildHead(template, route) {
     `<meta property="og:image" content="${OG_IMAGE}" />`,
     `<meta property="og:image:width" content="1200" />`,
     `<meta property="og:image:height" content="630" />`,
+    ...(route.publishedTime ? [`<meta property="article:published_time" content="${route.publishedTime}" />`] : []),
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${route.title}" />`,
     `<meta name="twitter:description" content="${route.description}" />`,
@@ -138,6 +165,18 @@ function buildHead(template, route) {
   ].join("\n    ");
 
   return html.replace("</head>", `    ${tags}\n  </head>`);
+}
+
+// Generated from the same ROUTES list every page's <head> comes from, so a
+// new post added to content/posts.js appears here automatically instead of
+// needing the static public/sitemap.xml kept in sync by hand.
+function buildSitemap() {
+  const urls = ROUTES.filter(r => !r.noindex).map(r => {
+    const priority = r.path === "/" ? "1.0" : r.path.startsWith("/blog/") ? "0.6" : "0.7";
+    return `  <url>\n    <loc>${SITE_URL}${r.path}</loc>\n    <priority>${priority}</priority>\n  </url>`;
+  }).join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
 function main() {
@@ -158,6 +197,9 @@ function main() {
     fs.writeFileSync(outPath, html);
     console.log(`prerender-seo: wrote ${path.relative(DIST, outPath) || "index.html"}`);
   }
+
+  fs.writeFileSync(path.join(DIST, "sitemap.xml"), buildSitemap());
+  console.log("prerender-seo: wrote sitemap.xml");
 }
 
 main();

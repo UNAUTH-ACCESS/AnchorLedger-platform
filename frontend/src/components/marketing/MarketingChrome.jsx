@@ -58,6 +58,7 @@ export function Eyebrow({ children }) {
 const NAV_LINKS = [
   ["Architecture", "/architecture"],
   ["Security", "/security"],
+  ["Blog", "/blog"],
 ];
 
 export function MarketingHeader({ current }) {
@@ -172,6 +173,7 @@ export function MarketingFooter() {
         {[
           ["Architecture", "/architecture"],
           ["Security", "/security"],
+          ["Blog", "/blog"],
           ["Terms of Service", "/terms"],
           ["Privacy Policy", "/privacy"],
           ["Contact", "mailto:support@anchorledger.space"],
