@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { colors } from "../../lib/tokens";
 import { marketing } from "../../api/endpoints";
+import { onInstallAvailabilityChange, promptInstall, isRunningInstalled } from "../../lib/pwaInstall";
 
 // Lightweight scroll fade-up, no animation library — matches "subtle
 // scroll-based fade-up only, no other animation" from the design brief.
@@ -61,6 +62,55 @@ const NAV_LINKS = [
   ["Blog", "/blog"],
 ];
 
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// Chrome/Android gets a real native install prompt on our own timing.
+// iOS Safari never fires beforeinstallprompt at all - there is no
+// programmatic install trigger there, only manual Share -> Add to Home
+// Screen, so this shows instructions instead of a button that would
+// silently do nothing.
+function InstallButton() {
+  const [available, setAvailable] = useState(false);
+  const [showIOSHint, setShowIOSHint] = useState(false);
+  const ios = isIOS();
+
+  useEffect(() => {
+    if (isRunningInstalled()) return;
+    return onInstallAvailabilityChange(setAvailable);
+  }, []);
+
+  if (isRunningInstalled()) return null;
+  if (!available && !ios) return null;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => ios ? setShowIOSHint(h => !h) : promptInstall()}
+        style={{
+          background: "transparent", border: `1px solid ${colors.border2}`,
+          borderRadius: 4, padding: "5px 10px", cursor: "pointer",
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+          color: colors.muted, display: "flex", alignItems: "center", gap: 5,
+        }}
+      >
+        ⤓ Install App
+      </button>
+      {showIOSHint && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", right: 0, width: 220,
+          background: colors.surface, border: `1px solid ${colors.border2}`,
+          borderRadius: 6, padding: "10px 12px", zIndex: 300,
+          fontSize: 11, color: colors.muted, lineHeight: 1.6,
+        }}>
+          Tap the Share icon in Safari, then "Add to Home Screen."
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MarketingHeader({ current }) {
   return (
     <div style={{ padding: "20px 20px 0" }}>
@@ -74,7 +124,7 @@ export function MarketingHeader({ current }) {
             Anchor Ledger
           </span>
         </Link>
-        <div style={{ display: "flex", gap: 20, marginLeft: "auto" }}>
+        <div style={{ display: "flex", gap: 20, marginLeft: "auto", alignItems: "center" }}>
           {NAV_LINKS.map(([label, href]) => (
             <Link
               key={href}
@@ -88,6 +138,7 @@ export function MarketingHeader({ current }) {
               {label}
             </Link>
           ))}
+          <InstallButton />
         </div>
       </div>
     </div>
