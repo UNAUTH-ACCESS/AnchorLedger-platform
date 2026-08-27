@@ -2,7 +2,7 @@
 // raw loader-script snippet (docs.smartsupp.com/chat-box/installation), so
 // this loads it the same way that snippet does, gated to production + a
 // real key only.
-const SMARTSUPP_KEY = "";
+const SMARTSUPP_KEY = "1d028fc8a7c23d42c051aae5060169b2290f0b52";
 
 let ready = false;
 
