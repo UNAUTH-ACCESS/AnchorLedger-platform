@@ -174,7 +174,7 @@ export function MarketingFooter() {
           ["Security", "/security"],
           ["Terms of Service", "/terms"],
           ["Privacy Policy", "/privacy"],
-          ["Contact", "mailto:hello@anchorledger.io"],
+          ["Contact", "mailto:support@anchorledger.space"],
         ].map(([label, href]) => (
           <a
             key={label}
