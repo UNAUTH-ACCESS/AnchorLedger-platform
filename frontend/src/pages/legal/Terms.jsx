@@ -5,7 +5,7 @@ export default function Terms() {
     <LegalLayout
       title="Terms of Service"
       effectiveDate="August 27, 2026"
-      operator="Anchor Ledger. [NOTE — Anchor Ledger is not currently operated through an incorporated legal entity. Operating without one exposes the individual(s) running the Platform to personal liability for its obligations; forming an entity before real-money mainnet execution begins is strongly recommended and should be confirmed with counsel.]"
+      operator="Anchor Ledger, a sole proprietorship operated from Germany. [NOTE — no incorporated legal entity exists; a sole proprietorship means personal, unlimited liability for whoever operates the Platform, not a corporate shield. Separately, German law (Telemediengesetz/Impressumspflicht) generally requires commercial websites to disclose the operating natural person's real name and address, not only a trade name — this page does not currently do so and should be reviewed with counsel before mainnet.]"
     >
       <Section n={1} title="Acceptance of These Terms">
         <P>
@@ -107,7 +107,10 @@ export default function Terms() {
 
       <Section n={13} title="Limitation of Liability">
         <AllCaps>
-          TO THE MAXIMUM EXTENT PERMITTED BY LAW, ANCHOR LEDGER AND ITS OPERATOR SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF FUNDS, PROFITS, OR DATA, ARISING FROM YOUR USE OF THE PLATFORM, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. [LIABILITY CAP AMOUNT/STRUCTURE — TO BE SET WITH COUNSEL, e.g. limited to fees paid in the preceding 12 months, if any. This is one of the highest-priority remaining items given Anchor Ledger currently has no incorporated entity — see the operator note above.]
+          TO THE MAXIMUM EXTENT PERMITTED BY LAW, ANCHOR LEDGER AND ITS OPERATOR SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF FUNDS, PROFITS, OR DATA, ARISING FROM YOUR USE OF THE PLATFORM, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. ANCHOR LEDGER'S TOTAL AGGREGATE LIABILITY TO YOU FOR ANY CLAIM ARISING FROM THESE TERMS OR YOUR USE OF THE PLATFORM IS LIMITED TO THE TOTAL FEES, IF ANY, YOU PAID TO ANCHOR LEDGER IN THE TWELVE (12) MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM. [Given Anchor Ledger charges no platform fees as of this draft (Section 9), this cap is currently at or near zero for most claims — confirm with counsel that this is the intended level of protection, particularly given the operator's personal, unlimited liability as a sole proprietorship.]
+        </AllCaps>
+        <AllCaps>
+          THIS LIMITATION DOES NOT APPLY TO LIABILITY THAT CANNOT BE LIMITED OR EXCLUDED UNDER APPLICABLE LAW, INCLUDING LIABILITY FOR INTENT OR GROSS NEGLIGENCE, OR FOR INJURY TO LIFE, BODY, OR HEALTH.
         </AllCaps>
       </Section>
 
@@ -119,7 +122,7 @@ export default function Terms() {
 
       <Section n={15} title="Dispute Resolution; Governing Law">
         <P>
-          [GOVERNING LAW AND DISPUTE MECHANISM — TO BE DETERMINED WITH COUNSEL. This cannot be meaningfully filled in until an operating entity exists (see the operator note above) and its jurisdiction of formation is known — governing law is normally tied to where that entity is domiciled. Given the Platform is accessible internationally, counsel should specifically advise on the enforceability of whatever mechanism is chosen across the jurisdictions Users actually connect from.]
+          These Terms are governed by the laws of Germany, without regard to conflict-of-laws principles. Disputes will be brought in the courts of Frankfurt, Germany. [Because Anchor Ledger operates as a sole proprietorship based in Germany, this reflects the operator's home jurisdiction by default rather than a deliberately chosen venue — given the Platform is accessible internationally, and depending on your own location, mandatory consumer-protection law in your jurisdiction may still apply regardless of this clause. CONFIRM WITH COUNSEL, including whether an arbitration clause would be preferable to court jurisdiction.]
         </P>
       </Section>
 

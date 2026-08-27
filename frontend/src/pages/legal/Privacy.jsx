@@ -5,7 +5,7 @@ export default function Privacy() {
     <LegalLayout
       title="Privacy Policy"
       effectiveDate="August 27, 2026"
-      operator="Anchor Ledger. [NOTE — not currently operated through an incorporated legal entity; see the equivalent note in the Terms of Service.]"
+      operator="Anchor Ledger, a sole proprietorship operated from Germany. [NOTE — see the equivalent note in the Terms of Service regarding personal liability and German Impressum disclosure requirements.]"
     >
       <Section n={1} title="Introduction">
         <P>
@@ -76,13 +76,13 @@ export default function Privacy() {
 
       <Section n={7} title="Your Rights">
         <P>
-          Regardless of where you're located, you may ask to access, correct, or request deletion of your personal information, or object to certain processing, by contacting us using the details in Section 11. Anchor Ledger is not currently targeting users in any specific region requiring a distinct statutory rights regime (e.g. GDPR, CCPA, NDPR); this section will be revisited with counsel if that changes. Note that we may be unable to delete certain records where retention is required for security, legal, or regulatory reasons, and that on-chain data cannot be altered or deleted by us regardless of request.
+          Because Anchor Ledger is operated from Germany, the EU General Data Protection Regulation (GDPR) applies to our processing of your information regardless of where you personally are located — this follows from where we operate, not from targeting any particular region. Under GDPR, you have the right to access, rectify, erase, or restrict processing of your personal information, to data portability, to object to certain processing, and to lodge a complaint with a supervisory authority (in Germany, the competent State Data Protection Authority). To make a request, contact us using the details in Section 11. [CONFIRM WITH COUNSEL that our actual practices satisfy each of these rights in full — this section states the rights that apply, not yet a complete operational process for fulfilling every request type.] Note that we may be unable to delete certain records where retention is required for security, legal, or regulatory reasons, and that on-chain data cannot be altered or deleted by us regardless of request.
         </P>
       </Section>
 
       <Section n={8} title="International Data Transfers">
         <P>
-          The Platform may process and store information in countries other than your own. Anchor Ledger is not currently targeting EU/UK residents specifically, so mechanisms like standard contractual clauses have not been put in place; [CONFIRM WITH COUNSEL if that changes, or if EU/UK usage becomes material regardless of targeting.]
+          The Platform may process and store information in countries other than your own. Our primary infrastructure (database and application servers) is hosted in the Netherlands, within the EU, alongside our own operation from Germany. Some third-party processors we rely on (see Section 9 — email delivery, analytics, live chat) may store or process data outside the EU depending on their own infrastructure. [CONFIRM WITH COUNSEL which of these processors' data flows require standard contractual clauses or another Article 46 GDPR safeguard — this has not yet been verified processor-by-processor.]
         </P>
       </Section>
 
@@ -106,10 +106,15 @@ export default function Privacy() {
           reference your account — chat messages themselves are stored by Smartsupp, not on our
           servers. Unlike our analytics provider, Smartsupp does not currently offer a way for us
           to clear this identification when you log out — on a shared or public device, we
-          recommend clearing your browser's cookies for this site afterward. A cookie-consent
-          banner has not been implemented, consistent with not currently targeting EU/UK
-          residents (Section 8); [CONFIRM WITH COUNSEL before specifically serving those regions,
-          or sooner if EU/UK usage becomes material regardless of targeting.]
+          recommend clearing your browser's cookies for this site afterward.
+        </P>
+        <P>
+          [OPEN ITEM: because Anchor Ledger is operated from Germany, GDPR/ePrivacy rules on
+          consent for non-essential cookies and tracking likely apply here regardless of visitor
+          location, the same as the rights described in Section 7. A cookie-consent banner
+          gating analytics/chat until the visitor consents has not yet been built — this is a
+          real, separate implementation task, not just a documentation gap, and should be
+          treated as a near-term priority alongside counsel review of this section.]
         </P>
       </Section>
 
