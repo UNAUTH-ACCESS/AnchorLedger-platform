@@ -98,8 +98,15 @@ export default function Privacy() {
         <P>
           We do not use session recording, and we do not automatically capture clicks, keystrokes,
           or form input — only the specific events listed above are ever sent. Logging out clears
-          this identification from your device. [CONFIRM WITH COUNSEL whether an EU/UK cookie-consent
-          banner is required for this configuration before serving those regions.]
+          this identification from your device.
+        </P>
+        <P>
+          We also use Crisp for live chat support. If you use it while logged in, your email
+          address and account ID are shared with Crisp so a support reply can reach you and
+          reference your account — chat messages themselves are stored by Crisp, not on our
+          servers. Logging out ends that session's identification the same way it does for
+          analytics. [CONFIRM WITH COUNSEL whether an EU/UK cookie-consent banner is required
+          for this configuration before serving those regions.]
         </P>
       </Section>
 

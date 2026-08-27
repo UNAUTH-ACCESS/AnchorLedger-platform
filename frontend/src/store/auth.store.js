@@ -3,6 +3,7 @@ import { auth as authApi } from "../api/endpoints";
 import { getOrCreateDeviceId } from "../lib/device";
 import { setAccessToken, clearAccessToken } from "../lib/tokenHolder";
 import { identifyUser, resetAnalytics } from "../lib/analytics";
+import { identifyChatUser, resetChat } from "../lib/chat";
 
 // Clears auth-specific keys only — al_device_id must survive logout/invalid-
 // token cases, since it identifies the physical device across sessions,
@@ -99,6 +100,7 @@ const useAuthStore = create((set, get) => ({
     setAccessToken(accessToken);
     localStorage.setItem("al_user_id", user.id);
     identifyUser(user.id);
+    identifyChatUser(user.email, user.id);
 
     const active = workspaces[0];
     if (active) localStorage.setItem("al_workspace_id", active.id);
@@ -144,6 +146,7 @@ const useAuthStore = create((set, get) => ({
     } catch { /* ignore */ } finally {
       clearAuthStorage();
       resetAnalytics();
+      resetChat();
       set({ user: null, workspaces: [], activeWorkspace: null, accessToken: null, status: "unauthenticated", error: null });
     }
   },

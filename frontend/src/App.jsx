@@ -7,6 +7,7 @@ import useAuthStore from "./store/auth.store";
 import useSystemStore from "./store/system.store";
 import { signals as signalsApi } from "./api/endpoints";
 import { initAnalytics, trackPageview } from "./lib/analytics";
+import { initChat } from "./lib/chat";
 
 // Pages
 import LoginPage    from "./pages/login/LoginPage";
@@ -106,6 +107,7 @@ export default function App() {
   useEffect(() => {
     bootstrap();
     initAnalytics();
+    initChat();
   }, []);
 
   // React Router's client-side navigation never fires a real page load, so
