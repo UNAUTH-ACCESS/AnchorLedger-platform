@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import useAuthStore from "../../store/auth.store";
 import NotificationCenter from "../notifications/NotificationCenter";
 import useSystemStore from "../../store/system.store";
@@ -86,11 +86,13 @@ function Sidebar({ onNav }) {
       display: "flex", flexDirection: "column",
       height: "100%", overflow: "hidden",
     }}>
-      {/* Logo */}
-      <div style={{
+      {/* Logo — links out to the marketing homepage, same as the icon does
+          everywhere else on the site (marketing header, browser favicon) */}
+      <Link to="/home" style={{
         padding: "18px 20px 14px",
         borderBottom: `1px solid ${colors.border}`,
         display: "flex", alignItems: "center", gap: 10,
+        textDecoration: "none", color: "inherit",
       }}>
         <div style={{
           width: 24, height: 24,
@@ -106,7 +108,7 @@ function Sidebar({ onNav }) {
             {activeWorkspace?.name || "—"}
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Regime orb */}
       <RegimeOrb regime={regime}/>
@@ -279,13 +281,13 @@ export function AppShell({ children }) {
               >
                 ☰
               </button>
-              <div style={{
+              <Link to="/home" style={{
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
-                color: colors.green,
+                color: colors.green, textDecoration: "none",
               }}>
                 AL
-              </div>
+              </Link>
             </>
           )}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
