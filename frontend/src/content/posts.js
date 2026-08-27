@@ -42,4 +42,23 @@ export const posts = [
       { type: "p", text: "Full detail on all of this, plus the on-chain permission model these controls sit alongside, is on our Security page." },
     ],
   },
+  {
+    slug: "what-actually-happens-between-a-signal-and-a-trade",
+    title: "What Actually Happens Between a Signal and a Trade",
+    description: "Not every signal becomes a trade. Four named checks — signal strength, drawdown, regime-based stress exposure, and Kelly-criterion position sizing — decide before anything is proposed.",
+    date: "2026-08-27",
+    blocks: [
+      { type: "p", text: "A signal firing doesn't mean a trade happens. Before anything becomes a Trade Proposal, it passes through four checks, in this order, against your own portfolio's risk configuration — not a generic one-size-fits-all filter." },
+      { type: "h2", text: "1. Signal strength threshold" },
+      { type: "p", text: "Every signal carries a strength score. If it's below your configured threshold, evaluation stops immediately — the signal is recorded, but nothing is proposed." },
+      { type: "h2", text: "2. Drawdown check" },
+      { type: "p", text: "Your current NAV is compared against your portfolio's inception NAV. If the drawdown from that starting point has already breached your configured maximum, new positions stop being proposed — the check runs before sizing, not after." },
+      { type: "h2", text: "3. Stress-regime exposure cap" },
+      { type: "p", text: "When the system's regime detection is currently reading \"STRESS,\" your total open-position exposure as a percentage of NAV is checked against a separate, tighter cap than normal conditions allow. Above that cap, further exposure is blocked until the regime changes or existing positions close." },
+      { type: "h2", text: "4. Position sizing via Kelly criterion" },
+      { type: "p", text: "If a signal clears the first three checks, its size isn't fixed — it's computed using a Kelly-criterion fraction (capped by your own configured maximum), applied against your current NAV and max-position-percent setting. If that computation resolves to zero or a balance too small to act on, the signal is blocked as insufficient balance rather than proposing a trade of nothing." },
+      { type: "h2", text: "Only what survives all four becomes a proposal" },
+      { type: "p", text: "A signal that's blocked at any step is still recorded, with the specific reason attached — drawdown breach, stress cap, below threshold, or insufficient balance — visible in your account's history, not silently dropped. Only a signal that clears every check becomes an actual Trade Proposal tied to a real wallet and venue." },
+    ],
+  },
 ];
