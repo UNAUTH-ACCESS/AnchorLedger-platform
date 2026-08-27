@@ -5,7 +5,7 @@ import posthog from "posthog-js";
 // ingestion permissions, not secrecy of this value. No env-var plumbing
 // needed for something that isn't a secret.
 const POSTHOG_KEY  = "phc_nQrwvvNw8y2ExELT5zqLfniUFUJntm26wa74Hy3QKyAN";
-const POSTHOG_HOST = "https://us.i.posthog.com";
+const POSTHOG_HOST = "https://eu.i.posthog.com";
 
 let ready = false;
 

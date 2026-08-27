@@ -101,12 +101,14 @@ export default function Privacy() {
           this identification from your device.
         </P>
         <P>
-          We also use Crisp for live chat support. If you use it while logged in, your email
-          address and account ID are shared with Crisp so a support reply can reach you and
-          reference your account — chat messages themselves are stored by Crisp, not on our
-          servers. Logging out ends that session's identification the same way it does for
-          analytics. [CONFIRM WITH COUNSEL whether an EU/UK cookie-consent banner is required
-          for this configuration before serving those regions.]
+          We also use Smartsupp for live chat support. If you use it while logged in, your email
+          address and account ID are shared with Smartsupp so a support reply can reach you and
+          reference your account — chat messages themselves are stored by Smartsupp, not on our
+          servers. Unlike our analytics provider, Smartsupp does not currently offer a way for us
+          to clear this identification when you log out — on a shared or public device, we
+          recommend clearing your browser's cookies for this site afterward. [CONFIRM WITH COUNSEL
+          whether an EU/UK cookie-consent banner is required for this configuration before serving
+          those regions.]
         </P>
       </Section>
 
