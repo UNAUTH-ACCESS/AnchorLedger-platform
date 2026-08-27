@@ -4,8 +4,8 @@ export default function Privacy() {
   return (
     <LegalLayout
       title="Privacy Policy"
-      effectiveDate="[TO BE COMPLETED UPON LAUNCH]"
-      operator="[LEGAL NAME / ENTITY — TO BE COMPLETED]"
+      effectiveDate="August 27, 2026"
+      operator="Anchor Ledger. [NOTE — not currently operated through an incorporated legal entity; see the equivalent note in the Terms of Service.]"
     >
       <Section n={1} title="Introduction">
         <P>
@@ -70,19 +70,19 @@ export default function Privacy() {
 
       <Section n={6} title="Data Retention">
         <P>
-          We retain account and identity-verification information for as long as your account is active and for a period afterward as required for legal, security, or dispute-resolution purposes [SPECIFIC RETENTION PERIODS TO BE SET WITH COUNSEL, informed by applicable law]. On-chain data (wallet addresses, transaction records) persists on public blockchains independently of Anchor Ledger and cannot be deleted by us.
+          We retain account information for as long as your account is active. Identity-verification records are retained for 5 years after account closure, a period commonly required under anti-money-laundering recordkeeping practices [SPECIFIC RETENTION PERIODS — CONFIRM WITH COUNSEL against the AML/KYC regime actually applicable once an operating entity and its jurisdiction are established]. On-chain data (wallet addresses, transaction records) persists on public blockchains independently of Anchor Ledger and cannot be deleted by us.
         </P>
       </Section>
 
       <Section n={7} title="Your Rights">
         <P>
-          Depending on where you are located, you may have rights to access, correct, or request deletion of your personal information, or to object to certain processing. [SPECIFIC RIGHTS AND MECHANISMS TO BE FINALIZED WITH COUNSEL BASED ON APPLICABLE LAW — e.g. NDPR for Nigerian residents, GDPR for EU/UK residents, CCPA for California residents.] To make a request, contact us using the details in Section 11. Note that we may be unable to delete certain records where retention is required for security, legal, or regulatory reasons, and that on-chain data cannot be altered or deleted by us regardless of request.
+          Regardless of where you're located, you may ask to access, correct, or request deletion of your personal information, or object to certain processing, by contacting us using the details in Section 11. Anchor Ledger is not currently targeting users in any specific region requiring a distinct statutory rights regime (e.g. GDPR, CCPA, NDPR); this section will be revisited with counsel if that changes. Note that we may be unable to delete certain records where retention is required for security, legal, or regulatory reasons, and that on-chain data cannot be altered or deleted by us regardless of request.
         </P>
       </Section>
 
       <Section n={8} title="International Data Transfers">
         <P>
-          The Platform may process and store information in countries other than your own. [SPECIFIC TRANSFER SAFEGUARDS — e.g. standard contractual clauses — TO BE CONFIRMED WITH COUNSEL if serving EU/UK residents.]
+          The Platform may process and store information in countries other than your own. Anchor Ledger is not currently targeting EU/UK residents specifically, so mechanisms like standard contractual clauses have not been put in place; [CONFIRM WITH COUNSEL if that changes, or if EU/UK usage becomes material regardless of targeting.]
         </P>
       </Section>
 
@@ -106,9 +106,10 @@ export default function Privacy() {
           reference your account — chat messages themselves are stored by Smartsupp, not on our
           servers. Unlike our analytics provider, Smartsupp does not currently offer a way for us
           to clear this identification when you log out — on a shared or public device, we
-          recommend clearing your browser's cookies for this site afterward. [CONFIRM WITH COUNSEL
-          whether an EU/UK cookie-consent banner is required for this configuration before serving
-          those regions.]
+          recommend clearing your browser's cookies for this site afterward. A cookie-consent
+          banner has not been implemented, consistent with not currently targeting EU/UK
+          residents (Section 8); [CONFIRM WITH COUNSEL before specifically serving those regions,
+          or sooner if EU/UK usage becomes material regardless of targeting.]
         </P>
       </Section>
 
@@ -120,7 +121,7 @@ export default function Privacy() {
 
       <Section n={11} title="Contact">
         <P>
-          Questions about this Privacy Policy, or requests regarding your information, may be directed to [SUPPORT/PRIVACY CONTACT EMAIL — TO BE COMPLETED].
+          Questions about this Privacy Policy, or requests regarding your information, may be directed to support@anchorledger.space.
         </P>
       </Section>
 

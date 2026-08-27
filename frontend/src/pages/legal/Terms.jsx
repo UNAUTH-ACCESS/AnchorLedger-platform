@@ -4,8 +4,8 @@ export default function Terms() {
   return (
     <LegalLayout
       title="Terms of Service"
-      effectiveDate="[TO BE COMPLETED UPON LAUNCH]"
-      operator="[LEGAL NAME / ENTITY — TO BE COMPLETED. As of this draft, Anchor Ledger is not operated through an incorporated entity. This document assumes an entity will be formed before these Terms take effect; the operator's legal name and structure must be inserted before publication.]"
+      effectiveDate="August 27, 2026"
+      operator="Anchor Ledger. [NOTE — Anchor Ledger is not currently operated through an incorporated legal entity. Operating without one exposes the individual(s) running the Platform to personal liability for its obligations; forming an entity before real-money mainnet execution begins is strongly recommended and should be confirmed with counsel.]"
     >
       <Section n={1} title="Acceptance of These Terms">
         <P>
@@ -28,9 +28,9 @@ export default function Terms() {
       <Section n={3} title="Eligibility">
         <UL items={[
           "You must be at least 18 years old (or the age of majority in your jurisdiction, if higher).",
-          "You must not be a resident of, or accessing the Platform from, any jurisdiction where use of the Platform would violate local law, including jurisdictions subject to comprehensive sanctions [LIST TO BE CONFIRMED WITH COUNSEL].",
-          "You must not be listed on any sanctions or restricted-party list maintained by the [UN / OFAC / applicable authorities — TO BE CONFIRMED].",
-          "You are solely responsible for determining whether your use of the Platform complies with the laws applicable to you in your own jurisdiction.",
+          "You must not be a resident of, or accessing the Platform from, a jurisdiction subject to comprehensive economic sanctions administered by the U.S. Treasury's Office of Foreign Assets Control (OFAC) or equivalent sanctions regimes. [This is an industry-standard baseline, not a full regulatory analysis — confirm with counsel before enforcement action, and revisit if Anchor Ledger later specifically targets additional jurisdictions.]",
+          "You must not be listed on OFAC's Specially Designated Nationals list or an equivalent sanctions/restricted-party list.",
+          "You are solely responsible for determining whether your use of the Platform complies with the laws applicable to you in your own jurisdiction. Anchor Ledger does not currently restrict access by region beyond the sanctions screening above.",
         ]}/>
       </Section>
 
@@ -50,7 +50,7 @@ export default function Terms() {
           "Blockchain transactions are generally irreversible; errors, including those caused by software bugs, cannot always be undone.",
           "Smart contracts and delegated-authority mechanisms carry inherent technical risk, including the possibility of bugs in Anchor Ledger's own systems or in third-party protocols it interacts with.",
           "Past performance of any signal or strategy is not indicative of future results.",
-          "Anchor Ledger may currently be operating in a test/limited-release capacity on test networks or with limited real-fund exposure; the specific status of the Platform at any given time will be communicated to Users [MECHANISM TO BE CONFIRMED].",
+          "Anchor Ledger may currently be operating in a test/limited-release capacity on test networks or with limited real-fund exposure; the specific status of the Platform at any given time is published on the Platform's public architecture page (anchorledger.space/architecture) and reflected in-app, and updates when execution status changes.",
         ]}/>
         <P>
           You agree that you are using the Platform at your own risk and that Anchor Ledger's liability for any loss is limited as set out in Section 13.
@@ -83,7 +83,7 @@ export default function Terms() {
 
       <Section n={9} title="Fees">
         <P>
-          [FEE STRUCTURE TO BE COMPLETED — e.g., any trading fees, spreads, or subscription costs. If none currently charged, state that explicitly and reserve the right to introduce fees with notice.]
+          Anchor Ledger does not currently charge a separate platform fee, subscription, or commission. Trades are subject to ordinary venue and network trading fees — currently modeled within the Platform's simulated-trading engine at standard industry rates (see Section 2), and reflecting actual venue fees once live order execution begins — which are a cost of trading itself, not additional revenue to Anchor Ledger. Anchor Ledger reserves the right to introduce platform fees in the future, with advance notice to Users before any fee applies to their account.
         </P>
       </Section>
 
@@ -101,13 +101,13 @@ export default function Terms() {
 
       <Section n={12} title="Disclaimers of Warranties">
         <AllCaps>
-          THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. QUANTEDGE DOES NOT WARRANT THAT THE PLATFORM WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE, OR THAT ANY TRADING SIGNAL OR STRATEGY WILL BE PROFITABLE.
+          THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. ANCHOR LEDGER DOES NOT WARRANT THAT THE PLATFORM WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE, OR THAT ANY TRADING SIGNAL OR STRATEGY WILL BE PROFITABLE.
         </AllCaps>
       </Section>
 
       <Section n={13} title="Limitation of Liability">
         <AllCaps>
-          TO THE MAXIMUM EXTENT PERMITTED BY LAW, QUANTEDGE AND ITS OPERATOR SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF FUNDS, PROFITS, OR DATA, ARISING FROM YOUR USE OF THE PLATFORM, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. [LIABILITY CAP AMOUNT/STRUCTURE — TO BE SET WITH COUNSEL, e.g. limited to fees paid in the preceding 12 months, if any.]
+          TO THE MAXIMUM EXTENT PERMITTED BY LAW, ANCHOR LEDGER AND ITS OPERATOR SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF FUNDS, PROFITS, OR DATA, ARISING FROM YOUR USE OF THE PLATFORM, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. [LIABILITY CAP AMOUNT/STRUCTURE — TO BE SET WITH COUNSEL, e.g. limited to fees paid in the preceding 12 months, if any. This is one of the highest-priority remaining items given Anchor Ledger currently has no incorporated entity — see the operator note above.]
         </AllCaps>
       </Section>
 
@@ -119,7 +119,7 @@ export default function Terms() {
 
       <Section n={15} title="Dispute Resolution; Governing Law">
         <P>
-          These Terms are governed by the laws of [JURISDICTION — TO BE DETERMINED WITH COUNSEL, informed by where the operating entity is formed]. [DISPUTE MECHANISM — arbitration clause, venue, or court jurisdiction TO BE DETERMINED.] Given the Platform serves Users across multiple countries, counsel should specifically advise on the enforceability of the chosen mechanism internationally.
+          [GOVERNING LAW AND DISPUTE MECHANISM — TO BE DETERMINED WITH COUNSEL. This cannot be meaningfully filled in until an operating entity exists (see the operator note above) and its jurisdiction of formation is known — governing law is normally tied to where that entity is domiciled. Given the Platform is accessible internationally, counsel should specifically advise on the enforceability of whatever mechanism is chosen across the jurisdictions Users actually connect from.]
         </P>
       </Section>
 
@@ -131,7 +131,7 @@ export default function Terms() {
 
       <Section n={17} title="Contact">
         <P>
-          Questions about these Terms may be directed to [SUPPORT/LEGAL CONTACT EMAIL — TO BE COMPLETED].
+          Questions about these Terms may be directed to support@anchorledger.space.
         </P>
       </Section>
     </LegalLayout>
