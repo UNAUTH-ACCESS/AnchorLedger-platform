@@ -4,7 +4,7 @@ import posthog from "posthog-js";
 // as a GA tracking ID) - PostHog's actual protection is server-side
 // ingestion permissions, not secrecy of this value. No env-var plumbing
 // needed for something that isn't a secret.
-const POSTHOG_KEY  = "";
+const POSTHOG_KEY  = "phc_nQrwvvNw8y2ExELT5zqLfniUFUJntm26wa74Hy3QKyAN";
 const POSTHOG_HOST = "https://us.i.posthog.com";
 
 let ready = false;
