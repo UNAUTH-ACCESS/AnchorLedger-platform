@@ -1,0 +1,30 @@
+User-agent: *
+Allow: /
+
+# Authenticated app pages — nothing to index behind a login wall, and
+# crawling them just wastes crawl budget hitting an auth redirect.
+Disallow: /dashboard
+Disallow: /signals
+Disallow: /proposals
+Disallow: /positions
+Disallow: /portfolio
+Disallow: /audit
+Disallow: /settings
+Disallow: /wallets
+Disallow: /withdrawals
+Disallow: /pnl
+Disallow: /admin/
+
+# Functional-only flows with no indexable content of their own
+Disallow: /onboarding
+Disallow: /kyc
+Disallow: /wallet-callback
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /unsubscribe
+
+# Backend API, never meant to be crawled
+Disallow: /api/
+
+Sitemap: https://anchorledger.space/sitemap.xml
