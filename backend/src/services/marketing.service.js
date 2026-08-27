@@ -16,9 +16,10 @@ const prisma = require("../lib/prisma");
 const logger = require("../lib/logger");
 const config = require("../lib/config");
 
-const RESEND_API_URL  = "https://api.resend.com/emails";
-const FROM_ADDRESS    = config.FROM_EMAIL;
-const APP_URL         = config.APP_URL;
+const RESEND_API_URL       = "https://api.resend.com/emails";
+const RESEND_BATCH_API_URL = "https://api.resend.com/emails/batch";
+const FROM_ADDRESS         = config.FROM_EMAIL;
+const APP_URL              = config.APP_URL;
 
 // ── Subscriber management ─────────────────────────────────────────────────────
 
@@ -125,33 +126,40 @@ async function sendWelcomeEmail(subscriber) {
 }
 
 async function sendCampaign(subject, htmlContent, recipientEmails = null) {
-  // If no recipients specified, send to all active subscribers
-  const emails = recipientEmails || (await prisma.subscriber.findMany({
-    where:  { status: "SUBSCRIBED" },
-    select: { email: true },
-  })).map(s => s.email);
+  // Full subscriber rows, not just emails - each recipient needs their own
+  // unsubscribeToken to get a real personalized unsubscribe link via
+  // buildEmail(), the same way welcome/lifecycle emails already do.
+  const subscribers = recipientEmails
+    ? await prisma.subscriber.findMany({ where: { email: { in: recipientEmails }, status: "SUBSCRIBED" } })
+    : await prisma.subscriber.findMany({ where: { status: "SUBSCRIBED" } });
 
-  if (emails.length === 0) {
+  if (subscribers.length === 0) {
     logger.info("[marketing] No recipients for campaign");
-    return { sent: 0 };
+    return { sent: 0, total: 0 };
   }
 
-  // Resend supports up to 50 recipients per call — batch if needed
-  const batchSize = 50;
+  // Resend's batch endpoint (up to 100 emails/call) sends each item as a
+  // fully independent email - unlike passing an array as `to` on a single
+  // call, no recipient's address is visible to any other recipient.
+  const batchSize = 100;
   let sent = 0;
 
-  for (let i = 0; i < emails.length; i += batchSize) {
-    const batch = emails.slice(i, i + batchSize);
+  for (let i = 0; i < subscribers.length; i += batchSize) {
+    const batch = subscribers.slice(i, i + batchSize);
     try {
-      await sendEmail(batch, subject, htmlContent);
+      await sendEmailBatch(batch.map(s => ({
+        to:      [s.email],
+        subject,
+        html:    buildEmail(s, subject, htmlContent),
+      })));
       sent += batch.length;
-      logger.info("[marketing] Campaign batch sent", { sent, total: emails.length });
+      logger.info("[marketing] Campaign batch sent", { sent, total: subscribers.length });
     } catch (err) {
       logger.error("[marketing] Campaign batch failed", { error: err.message, batch: batch.length });
     }
   }
 
-  return { sent, total: emails.length };
+  return { sent, total: subscribers.length };
 }
 
 function buildEmail(subscriber, subject, bodyHtml) {
@@ -195,6 +203,30 @@ async function sendEmail(to, subject, html) {
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Resend error ${res.status}: ${body}`);
+  }
+
+  return res.json();
+}
+
+// POST /emails/batch - a raw JSON array, each item a fully independent
+// email (own `to`, own `html`). Not the same as passing an array to
+// sendEmail()'s single-call `to` field, which puts every address in one
+// shared header visible to every recipient in that call.
+async function sendEmailBatch(emails) {
+  const apiKey = config.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY not configured");
+
+  const payload = emails.map(e => ({ from: FROM_ADDRESS, ...e }));
+
+  const res = await fetch(RESEND_BATCH_API_URL, {
+    method:  "POST",
+    headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body:    JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Resend batch error ${res.status}: ${body}`);
   }
 
   return res.json();
