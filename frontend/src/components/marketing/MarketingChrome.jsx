@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { colors } from "../../lib/tokens";
+import { marketing } from "../../api/endpoints";
 
 // Lightweight scroll fade-up, no animation library — matches "subtle
 // scroll-based fade-up only, no other animation" from the design brief.
@@ -92,10 +93,82 @@ export function MarketingHeader({ current }) {
   );
 }
 
+// Separate from the "Get Early Access" CTA elsewhere on these pages, which
+// goes straight to /signup - that's a real, open account creation flow, not
+// a waitlist. This is just an honest "email me when something ships" capture
+// distinct from /subscribe's stale "Private Beta / waitlist" copy, which
+// doesn't reflect that signup is already open.
+function NewsletterSignup() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState("idle"); // idle | submitting | done | error
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email) return;
+    setState("submitting");
+    try {
+      await marketing.subscribe(email, null, "footer");
+      setState("done");
+    } catch {
+      setState("error");
+    }
+  };
+
+  if (state === "done") {
+    return (
+      <div style={{ fontSize: 11, color: colors.green, fontFamily: "'JetBrains Mono', monospace" }}>
+        ✓ You're on the list — we'll email you when something ships.
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <span style={{ fontSize: 11, color: colors.muted, fontFamily: "'JetBrains Mono', monospace" }}>
+        Get notified when we ship:
+      </span>
+      <input
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="you@example.com"
+        required
+        disabled={state === "submitting"}
+        style={{
+          background: colors.surface2, border: `1px solid ${colors.border2}`,
+          borderRadius: 4, padding: "6px 10px", fontSize: 11,
+          fontFamily: "'JetBrains Mono', monospace", color: colors.text, outline: "none",
+          width: 180,
+        }}
+      />
+      <button
+        type="submit"
+        disabled={state === "submitting" || !email}
+        style={{
+          background: "transparent", border: `1px solid ${colors.green}`,
+          color: colors.green, borderRadius: 4, padding: "6px 12px",
+          fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
+          cursor: state === "submitting" ? "not-allowed" : "pointer",
+        }}
+      >
+        {state === "submitting" ? "…" : "Subscribe"}
+      </button>
+      {state === "error" && (
+        <span style={{ fontSize: 10, color: colors.red, fontFamily: "'JetBrains Mono', monospace" }}>
+          Something went wrong — try again.
+        </span>
+      )}
+    </form>
+  );
+}
+
 export function MarketingFooter() {
   return (
     <div style={{ borderTop: `1px solid ${colors.border}` }}>
-      <div style={{ ...wrap, padding: "28px 20px", display: "flex", gap: 20, flexWrap: "wrap" }}>
+      <div style={{ ...wrap, padding: "28px 20px 0" }}>
+        <NewsletterSignup />
+      </div>
+      <div style={{ ...wrap, padding: "20px 20px 28px", display: "flex", gap: 20, flexWrap: "wrap" }}>
         {[
           ["Architecture", "/architecture"],
           ["Security", "/security"],
