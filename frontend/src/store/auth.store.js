@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { auth as authApi } from "../api/endpoints";
 import { getOrCreateDeviceId } from "../lib/device";
 import { setAccessToken, clearAccessToken } from "../lib/tokenHolder";
+import { identifyUser, resetAnalytics } from "../lib/analytics";
 
 // Clears auth-specific keys only — al_device_id must survive logout/invalid-
 // token cases, since it identifies the physical device across sessions,
@@ -97,6 +98,7 @@ const useAuthStore = create((set, get) => ({
   _applySession: (accessToken, user, workspaces) => {
     setAccessToken(accessToken);
     localStorage.setItem("al_user_id", user.id);
+    identifyUser(user.id);
 
     const active = workspaces[0];
     if (active) localStorage.setItem("al_workspace_id", active.id);
@@ -141,6 +143,7 @@ const useAuthStore = create((set, get) => ({
       await authApi.logout();
     } catch { /* ignore */ } finally {
       clearAuthStorage();
+      resetAnalytics();
       set({ user: null, workspaces: [], activeWorkspace: null, accessToken: null, status: "unauthenticated", error: null });
     }
   },

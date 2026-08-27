@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { RouteGuard } from "./components/auth/RouteGuard";
 import { AppShell } from "./components/layout/AppShell";
@@ -6,6 +6,7 @@ import { useSocket } from "./hooks/useSocket";
 import useAuthStore from "./store/auth.store";
 import useSystemStore from "./store/system.store";
 import { signals as signalsApi } from "./api/endpoints";
+import { initAnalytics, trackPageview } from "./lib/analytics";
 
 // Pages
 import LoginPage    from "./pages/login/LoginPage";
@@ -100,10 +101,18 @@ function AuthenticatedApp() {
 
 export default function App() {
   const bootstrap = useAuthStore((s) => s.bootstrap);
+  const location = useLocation();
 
   useEffect(() => {
     bootstrap();
+    initAnalytics();
   }, []);
+
+  // React Router's client-side navigation never fires a real page load, so
+  // this is the only thing that tells analytics a route actually changed.
+  useEffect(() => {
+    trackPageview(location.pathname);
+  }, [location.pathname]);
 
   return (
     <Routes>

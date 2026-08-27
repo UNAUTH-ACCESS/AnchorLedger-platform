@@ -88,7 +88,18 @@ export default function Privacy() {
 
       <Section n={9} title="Cookies and Tracking">
         <P>
-          [TO BE COMPLETED based on actual analytics/cookie usage in the product — if none currently in use, state that explicitly; if added later, this section and any required consent banner must be updated accordingly.]
+          We use PostHog, a third-party analytics provider, to understand how visitors use the
+          Platform and to improve it. This is limited to:
+        </P>
+        <UL items={[
+          "Which pages you view and when, so we know what's actually working",
+          "Your account ID once you're logged in, so we can see the path from a first visit to a signed-up account",
+        ]}/>
+        <P>
+          We do not use session recording, and we do not automatically capture clicks, keystrokes,
+          or form input — only the specific events listed above are ever sent. Logging out clears
+          this identification from your device. [CONFIRM WITH COUNSEL whether an EU/UK cookie-consent
+          banner is required for this configuration before serving those regions.]
         </P>
       </Section>
 
