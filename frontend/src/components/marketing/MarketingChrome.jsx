@@ -71,7 +71,10 @@ function isIOS() {
 // programmatic install trigger there, only manual Share -> Add to Home
 // Screen, so this shows instructions instead of a button that would
 // silently do nothing.
-function InstallButton() {
+// compact: true drops the text label to just the icon - the AppShell
+// mobile topbar (hamburger + logo + notification/clock/status) is already
+// tight, per the crowding fix in NotificationCenter/AppShell earlier.
+export function InstallButton({ compact = false }) {
   const [available, setAvailable] = useState(false);
   const [showIOSHint, setShowIOSHint] = useState(false);
   const ios = isIOS();
@@ -88,14 +91,15 @@ function InstallButton() {
     <div style={{ position: "relative" }}>
       <button
         onClick={() => ios ? setShowIOSHint(h => !h) : promptInstall()}
+        aria-label="Install App"
         style={{
           background: "transparent", border: `1px solid ${colors.border2}`,
-          borderRadius: 4, padding: "5px 10px", cursor: "pointer",
+          borderRadius: 4, padding: compact ? "5px 7px" : "5px 10px", cursor: "pointer",
           fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
           color: colors.muted, display: "flex", alignItems: "center", gap: 5,
         }}
       >
-        ⤓ Install App
+        {compact ? "⤓" : "⤓ Install App"}
       </button>
       {showIOSHint && (
         <div style={{

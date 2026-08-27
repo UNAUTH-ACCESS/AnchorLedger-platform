@@ -6,6 +6,7 @@ import useSystemStore from "../../store/system.store";
 import { SystemStatus } from "../system/SystemStatus";
 import { regime as regimeMeta, colors } from "../../lib/tokens";
 import { fmt } from "../../lib/format";
+import { InstallButton } from "../marketing/MarketingChrome";
 
 const NAV = [
   { to: "/dashboard",  label: "Dashboard",  icon: "▦" },
@@ -291,6 +292,7 @@ export function AppShell({ children }) {
             </>
           )}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
+            <InstallButton compact={isMobile}/>
             <NotificationCenter/>
             <Clock/>
             <SystemStatus/>
