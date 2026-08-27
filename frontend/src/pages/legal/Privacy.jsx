@@ -109,12 +109,15 @@ export default function Privacy() {
           recommend clearing your browser's cookies for this site afterward.
         </P>
         <P>
-          [OPEN ITEM: because Anchor Ledger is operated from Germany, GDPR/ePrivacy rules on
-          consent for non-essential cookies and tracking likely apply here regardless of visitor
-          location, the same as the rights described in Section 7. A cookie-consent banner
-          gating analytics/chat until the visitor consents has not yet been built — this is a
-          real, separate implementation task, not just a documentation gap, and should be
-          treated as a near-term priority alongside counsel review of this section.]
+          Because Anchor Ledger is operated from Germany, GDPR/ePrivacy rules on consent for
+          non-essential cookies apply here regardless of visitor location, the same as the rights
+          described in Section 7. Both PostHog and Smartsupp are off by default and load only
+          after you make a choice in the cookie banner shown on your first visit — analytics and
+          chat can each be individually accepted or rejected via "Customize," and you can change
+          that choice at any time via "Cookie Settings" in the footer or "Manage Cookie
+          Preferences" in Settings. [CONFIRM WITH COUNSEL that this implementation — banner
+          copy, granularity, and the underlying opt-in/opt-out mechanism — actually satisfies
+          GDPR/ePrivacy requirements; this is a good-faith implementation, not a legal sign-off.]
         </P>
       </Section>
 

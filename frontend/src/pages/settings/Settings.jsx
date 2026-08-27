@@ -11,6 +11,7 @@ import { colors, regime as regimeMeta } from "../../lib/tokens";
 import { fmt } from "../../lib/format";
 import { registerPush, unregisterPush } from "../../lib/push";
 import { auth as authApi } from "../../api/endpoints";
+import { requestConsentReview } from "../../lib/consent";
 
 function Section({ title, children }) {
   return (
@@ -518,6 +519,23 @@ export default function Settings() {
 
         <Section title="Two-Factor Authentication">
           <TwoFactorSetup/>
+        </Section>
+
+        <Section title="Privacy">
+          <div style={{ fontSize: 11, color: colors.muted, lineHeight: 1.6, marginBottom: 4 }}>
+            Analytics and live chat are optional and off by default until you choose. See our{" "}
+            <a href="/privacy" style={{ color: colors.green }}>Privacy Policy</a> for what each does.
+          </div>
+          <button
+            onClick={requestConsentReview}
+            style={{
+              alignSelf: "flex-start", background: "transparent", border: `1px solid ${colors.border2}`,
+              borderRadius: 4, padding: "8px 14px", fontSize: 11, fontFamily: "'JetBrains Mono', monospace",
+              color: colors.text, cursor: "pointer",
+            }}
+          >
+            Manage Cookie Preferences
+          </button>
         </Section>
 
         <Section title="System">

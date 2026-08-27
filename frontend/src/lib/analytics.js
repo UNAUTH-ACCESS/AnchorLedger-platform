@@ -25,8 +25,20 @@ export function initAnalytics() {
     // pageview autocapture only ever sees the first URL - pageviews are
     // sent manually via trackPageview() on every route change instead.
     capture_pageview: false,
+    // GDPR applies here (operator is Germany-established) - loads silent
+    // and sends nothing until setAnalyticsConsent(true) actually opts in,
+    // verified against posthog-js's own type definitions rather than
+    // assumed. capture()/identify() calls below are safe to leave
+    // unconditional - PostHog itself no-ops them while opted out.
+    opt_out_capturing_by_default: true,
   });
   ready = true;
+}
+
+export function setAnalyticsConsent(granted) {
+  if (!ready) return;
+  if (granted) posthog.opt_in_capturing();
+  else posthog.opt_out_capturing();
 }
 
 export function trackPageview(pathname) {

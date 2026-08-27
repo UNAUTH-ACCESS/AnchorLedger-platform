@@ -44,3 +44,15 @@ export function identifyChatUser(email, userId) {
 // deliberate no-op rather than a fake reset that doesn't actually reset
 // anything - revisit if Smartsupp documents one later.
 export function resetChat() {}
+
+// Unlike PostHog, Smartsupp has no opt_out_capturing()-style API and no
+// npm SDK - initChat() itself does the one-time script injection, which
+// can't be undone. If consent is granted then later revoked in the same
+// session, chat:hide is the most this integration can honestly do:
+// verified as a real documented command, it stops the widget being
+// visible/interactive, but the script stays loaded in memory until the
+// next full page load.
+export function hideChat() {
+  if (!ready || !window.smartsupp) return;
+  window.smartsupp("chat:hide");
+}

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { colors } from "../../lib/tokens";
 import { marketing } from "../../api/endpoints";
 import { onInstallAvailabilityChange, promptInstall, isRunningInstalled } from "../../lib/pwaInstall";
+import { requestConsentReview } from "../../lib/consent";
 
 // Lightweight scroll fade-up, no animation library — matches "subtle
 // scroll-based fade-up only, no other animation" from the design brief.
@@ -241,6 +242,15 @@ export function MarketingFooter() {
             {label}
           </a>
         ))}
+        <button
+          onClick={requestConsentReview}
+          style={{
+            fontSize: 11, color: colors.muted, fontFamily: "'JetBrains Mono', monospace",
+            background: "transparent", border: "none", padding: 0, cursor: "pointer",
+          }}
+        >
+          Cookie Settings
+        </button>
       </div>
     </div>
   );

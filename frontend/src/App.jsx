@@ -6,8 +6,10 @@ import { useSocket } from "./hooks/useSocket";
 import useAuthStore from "./store/auth.store";
 import useSystemStore from "./store/system.store";
 import { signals as signalsApi } from "./api/endpoints";
-import { initAnalytics, trackPageview } from "./lib/analytics";
-import { initChat } from "./lib/chat";
+import { initAnalytics, trackPageview, setAnalyticsConsent } from "./lib/analytics";
+import { initChat, hideChat } from "./lib/chat";
+import { onConsentChange } from "./lib/consent";
+import CookieConsentBanner from "./components/consent/CookieConsentBanner";
 
 // Pages
 import LoginPage    from "./pages/login/LoginPage";
@@ -108,8 +110,17 @@ export default function App() {
 
   useEffect(() => {
     bootstrap();
+    // initAnalytics() always runs - it loads PostHog opted-out by default
+    // (verified against posthog-js's own type definitions) so it's silent
+    // until setAnalyticsConsent(true) below, never a tracking-before-
+    // consent problem. Chat has no such opt-out API, so initChat() itself
+    // only ever runs once consent is actually granted.
     initAnalytics();
-    initChat();
+    return onConsentChange((prefs) => {
+      setAnalyticsConsent(!!prefs?.analytics);
+      if (prefs?.chat) initChat();
+      else hideChat();
+    });
   }, []);
 
   // React Router's client-side navigation never fires a real page load, so
@@ -119,6 +130,7 @@ export default function App() {
   }, [location.pathname]);
 
   return (
+    <>
     <Routes>
       <Route path="/" element={<RootRoute/>} />
       {/* Unconditional — RootRoute above redirects an authenticated session
@@ -155,5 +167,7 @@ export default function App() {
         </RouteGuard>
       }/>
     </Routes>
+    <CookieConsentBanner/>
+    </>
   );
 }
