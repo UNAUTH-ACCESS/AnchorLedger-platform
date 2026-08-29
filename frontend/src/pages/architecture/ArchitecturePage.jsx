@@ -35,10 +35,14 @@ const CHAIN_DETAIL = {
     ],
   },
   ERC20: {
-    label: "Ethereum", live: false, role: "Planned",
-    approval: "Not yet live",
-    fees: "—",
-    steps: [["Status", "Ethereum support is planned next — this page updates the moment it goes live"]],
+    label: "Ethereum", live: true, role: "Trade execution",
+    approval: "MetaMask approval with an explicit USDT spending cap",
+    fees: "Gas for a wallet's first trading approval is auto-funded, same as Tron — a new user isn't blocked by needing ETH first",
+    steps: [
+      ["Approval", "MetaMask approval, capped to the amount you request"],
+      ["Fee", "First approval's gas is funded for you"],
+      ["Verification", "Server confirms the on-chain allowance directly — never trusts the wallet app's own success message"],
+    ],
   },
 };
 

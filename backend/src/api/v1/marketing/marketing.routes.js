@@ -15,7 +15,7 @@ const router = express.Router();
 const CHAIN_STATUS = {
   SPL:   { label: "Solana",   role: "Deposits & withdrawals", live: true  },
   TRC20: { label: "Tron",     role: "Trade execution",        live: true  },
-  ERC20: { label: "Ethereum", role: "Trade execution",        live: false },
+  ERC20: { label: "Ethereum", role: "Trade execution",        live: true  },
 };
 
 // GET /marketing/stats — public, no auth. Real, currently-true numbers only -

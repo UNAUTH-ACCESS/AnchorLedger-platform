@@ -59,7 +59,7 @@ const CHAINS = [
     switchChain: async () => {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0x7a69" }] // Hardhat local chainId 31337
+        params: [{ chainId: "0xaa36a7" }] // Sepolia testnet, chainId 11155111
       });
     },
     sendApproval: async (payload) => {

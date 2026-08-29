@@ -353,7 +353,7 @@ export default function HomePage() {
 
         <FAQItem
           question="Which chains are supported?"
-          answer="Solana handles deposits and withdrawals; Tron is where trade execution actually happens — both live today. Ethereum support is planned next, see the roadmap below."
+          answer="Solana handles deposits and withdrawals; Tron and Ethereum both handle trade execution — all three live today. See the roadmap below for exactly what 'live' means on each."
         />
         <FAQItem
           question="What does identity verification actually involve?"

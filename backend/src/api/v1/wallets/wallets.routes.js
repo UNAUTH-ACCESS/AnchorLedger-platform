@@ -8,6 +8,17 @@ const { sendDepositApproved } = require("../../../services/lifecycle.service");
 
 const router = express.Router();
 
+// Explicit map, not an else-fallback that assigns "ERC20" to anything that
+// isn't Solana/Tron - that worked by exclusion only because EVM has been
+// the sole third chain type. A 4th chain type added later would silently
+// get miscategorized as ERC20 under the old exclusion-based logic.
+const CHAIN_TYPE_TO_KEY = { SOLANA: "SPL", TRON: "TRC20", EVM: "ERC20" };
+function chainTypeToKey(chainType) {
+  const key = CHAIN_TYPE_TO_KEY[chainType];
+  if (!key) throw new AppError(`Unrecognized chain type: ${chainType}`, 500, "UNKNOWN_CHAIN_TYPE");
+  return key;
+}
+
 // GET /wallets
 router.get("/", authenticate, requireWorkspace, async (req, res, next) => {
   try {
@@ -113,10 +124,10 @@ router.post("/link-payload", authenticate, requireKycApproved, async (req, res, 
       where: { id: { in: walletIds } },
       include: { chain: true },
     });
-    const chains = wallets.map(w => w.chain?.type === "SOLANA" ? "SPL" : w.chain?.type === "TRON" ? "TRC20" : "ERC20");
+    const chains = wallets.map(w => chainTypeToKey(w.chain?.type));
     const addresses = {};
     for (const w of wallets) {
-      const key = w.chain?.type === "SOLANA" ? "SPL" : w.chain?.type === "TRON" ? "TRC20" : "ERC20";
+      const key = chainTypeToKey(w.chain?.type);
       addresses[key] = w.address;
     }
     const result = await delegatePost("/link-payload", { chains, capUSDT, addresses });
@@ -137,7 +148,7 @@ router.post("/:id/link-confirm", authenticate, requireKycApproved, async (req, r
     const wallet = await assertWalletAccess(req.params.id, req.user.id);
     const walletWithChain = await prisma.wallet.findUnique({ where: { id: req.params.id }, include: { chain: true } });
 
-    const chainKey = walletWithChain.chain?.type === "SOLANA" ? "SPL" : walletWithChain.chain?.type === "TRON" ? "TRC20" : "ERC20";
+    const chainKey = chainTypeToKey(walletWithChain.chain?.type);
     const addresses = { [chainKey]: wallet.address };
     const statusRes = await delegatePost("/status", { chains: [chainKey], addresses });
     const chainStatus = (statusRes.statuses || []).find(s => s.chain === chainKey);
@@ -317,7 +328,7 @@ router.post("/:id/unlink-payload", authenticate, async (req, res, next) => {
   try {
     const wallet = await assertWalletAccess(req.params.id, req.user.id);
     const walletWithChain = await prisma.wallet.findUnique({ where: { id: req.params.id }, include: { chain: true } });
-    const chainKey = walletWithChain.chain?.type === "SOLANA" ? "SPL" : walletWithChain.chain?.type === "TRON" ? "TRC20" : "ERC20";
+    const chainKey = chainTypeToKey(walletWithChain.chain?.type);
     const addresses = { [chainKey]: wallet.address };
     const result = await delegatePost("/revoke-payload", { chains: [chainKey], addresses });
     res.json({ success: true, data: { payload: result.payloads[chainKey] } });
