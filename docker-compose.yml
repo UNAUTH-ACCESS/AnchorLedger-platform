@@ -150,6 +150,8 @@ services:
       - ./nginx/certbot/www:/var/www/certbot:ro
     depends_on:
       - api
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - internal
 
