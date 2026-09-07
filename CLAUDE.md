@@ -31,7 +31,13 @@ detail — no feature may quietly turn it into custody.
   local fallback — if you must build on the box, `free -h` first, one service at a time,
   and note dockerd needs a restart afterward to release the build memory.
 - Every compose service has `mem_limit` / `pids_limit` (ceilings, not reservations) so
-  one runaway can't OOM the box. Backend image is ~470 MB (multi-stage, `--omit=dev`).
+  one runaway can't OOM the box. Backend image is ~470 MB (multi-stage, `--omit=dev`),
+  runs as the non-root `node` user (uid 1000 = host `solana`, so bind-mounted
+  `storage/kyc-docs` files land 1000:1000).
+- **nginx config lives in `nginx/active.conf` (bind-mounted as a single file).** Editing it
+  in an editor swaps the inode, so the running container keeps serving the old file — after
+  any change run `docker compose up -d --force-recreate nginx` (brief blip on all vhosts),
+  not `nginx -s reload`. `server_tokens off` + a conservative app-origin CSP are set here.
 - Frontend bundle is route-split (`React.lazy` + `manualChunks`): the wallet SDKs
   (`@solana/web3.js`, `tronweb`, `@tronweb3`) load only on `/wallets` and `/onboarding`,
   not the marketing path. Don't add a static import of those from an eager module, and
@@ -102,12 +108,17 @@ passphrase generation, DB writes to financial tables, SSH/auth hardening):
   `docker compose build` on the box is still the deploy path.
 - **delegate-server `/health` reports `degraded`** because the SPL (devnet MockUSDT
   *trading*) executor can't load `server/solana-deployment.json` — that file has never
-  existed on this box and there's no devnet Solana validator in prod. This is expected:
-  SPL trading isn't used (`TRADING_CHAINS = ["TRC20"]`), and the real Solana money path
-  (`SPL_USDC_MAINNET`, deposit sweep) is `available: true`. Don't chase it as a regression.
+  existed on this box and there's no devnet Solana validator in prod. Expected: SPL
+  trading is retired (`TRADING_CHAINS = ["TRC20"]`; the `/wallets` page no longer offers
+  a Solana trading card), and the real Solana money path (`SPL_USDC_MAINNET`, deposit
+  sweep) is `available: true`. Don't chase it as a regression.
 - **`clients.routes.js` admin metric** filters deposits on `status === "MINTED"` for
   "totalDeposited" — MINTED is a transient mid-flow state; this almost certainly should
   be `COMPLETE`. Pre-existing, not yet fixed.
+- **App-origin CSP is deliberately loose** (`script-src`/`style-src`/`connect-src` allow
+  `https:` + `'unsafe-inline'` + `'unsafe-eval'`) so the consent-gated PostHog/Smartsupp
+  integrations can't be broken by it. A real source-list CSP is a separate, browser-tested
+  job — the current one only enforces the structural directives.
 - **Backups**: automated offsite backups were deferred at the last rebuild. Nightly
   `~/backups/quantedge-*.sql.gz` dumps exist locally — confirm a recent one is real before
   trusting it, and there is no verified offsite copy.
