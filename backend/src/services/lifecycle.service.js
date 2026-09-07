@@ -22,16 +22,21 @@ const APP_URL        = config.APP_URL;
 
 // ── Triggers ──────────────────────────────────────────────────────────────────
 
+// Returns true if the email actually went out, false otherwise — the caller
+// (register / resend-verification) surfaces this so a user whose email
+// provider the sender rejects isn't left silently unverified.
 async function sendVerificationEmail(userId, token) {
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return;
+    if (!user) return false;
 
     const verifyUrl = `${APP_URL}/verify-email?token=${token}`;
     await send(user.email, "Verify your Anchor Ledger email", buildVerification(user, verifyUrl));
     logger.info("[lifecycle] Verification email sent", { userId, email: user.email });
+    return true;
   } catch (err) {
     logger.warn("[lifecycle] Verification email failed", { userId, error: err.message });
+    return false;
   }
 }
 

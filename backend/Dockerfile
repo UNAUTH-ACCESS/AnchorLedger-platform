@@ -22,15 +22,19 @@ COPY prisma ./prisma
 RUN npx prisma generate
 
 # ---- base: shared runtime layer ----
+# Runs as the built-in non-root `node` user (uid 1000), which matches the
+# host `solana` user that owns the bind-mounted storage/kyc-docs volume — so
+# encrypted KYC docs are written 1000:1000, not root:root.
 FROM node:20-alpine AS base
 RUN apk add --no-cache openssl
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=proddeps /app/node_modules ./node_modules
-COPY package*.json ./
-COPY prisma ./prisma
-COPY src ./src
-COPY scripts ./scripts
+COPY --from=proddeps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node src ./src
+COPY --chown=node:node scripts ./scripts
+USER node
 
 FROM base AS api
 EXPOSE 3000

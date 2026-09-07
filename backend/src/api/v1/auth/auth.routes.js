@@ -196,9 +196,11 @@ router.post("/register", registerLimiter, [
     await prisma.refreshToken.create({ data: { userId: result.user.id, token: refresh, expiresAt } });
     setRefreshCookie(res, refresh);
 
-    // Send welcome + verification emails (non-blocking)
+    // Welcome email stays fire-and-forget. The verification email actually
+    // gates the account, so await it (~one API call) and tell the client
+    // whether it went out — a silent failure otherwise strands the user.
     sendWelcome(result.user.id, result.workspace.id).catch(() => {});
-    sendVerificationEmail(result.user.id, verificationToken).catch(() => {});
+    const verificationEmailSent = await sendVerificationEmail(result.user.id, verificationToken);
 
     res.status(201).json({
       success: true,
@@ -206,6 +208,7 @@ router.post("/register", registerLimiter, [
         accessToken: access,
         user: { id: result.user.id, email, name, emailVerified: false, twoFactorEnabled: false },
         workspace: { id: result.workspace.id, slug },
+        verificationEmailSent,
       },
     });
   } catch (err) { next(err); }
@@ -470,9 +473,9 @@ router.post("/resend-verification", authenticate, async (req, res, next) => {
       data: { emailVerificationToken: verificationToken, emailVerificationExpiresAt: verificationExpiresAt },
     });
 
-    await sendVerificationEmail(user.id, verificationToken);
+    const sent = await sendVerificationEmail(user.id, verificationToken);
 
-    res.json({ success: true, data: { sent: true } });
+    res.json({ success: true, data: { sent } });
   } catch (err) { next(err); }
 });
 

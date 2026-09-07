@@ -124,40 +124,11 @@ const CHAINS = [
       return result.txid;
     }
   },
-  {
-    key:      "SPL",
-    label:    "Solana",
-    sub:      "SOL trades · SPL USDT",
-    provider: "PHANTOM",
-    icon:     "◎",
-    color:    "#9945FF",
-    detect:   () => true, // detection happens inside getAddress — mobile browsers
-                           // without Phantom injected fall back to a deep link there
-                           // instead of hard-blocking here (matches OnboardingPage.jsx)
-    getAddress: async () => {
-      if (window.solana?.isPhantom) {
-        const resp = await window.solana.connect();
-        return resp.publicKey.toString();
-      }
-      const url = encodeURIComponent(window.location.href);
-      window.location.href = "https://phantom.app/ul/browse/" + url + "?ref=" + url;
-      return "__DEEPLINK__";
-    },
-    switchChain: async () => {}, // Phantom handles network internally
-    sendApproval: async (payload) => {
-      // SPL approve via Phantom signAndSendTransaction
-      // The transaction is built server-side and returned as a base64 serialized tx
-      // Payload includes: { transaction: base64string } built by delegate-server
-      if (payload.transaction) {
-        const txBytes = Uint8Array.from(atob(payload.transaction), c => c.charCodeAt(0));
-        const tx = Transaction.from(txBytes);
-        const result = await window.solana.signAndSendTransaction(tx);
-        return result.signature;
-      }
-      // Fallback: return payload note if no tx built yet
-      throw new Error("SPL transaction payload missing — ensure delegate server is running");
-    }
-  }
+  // Solana is intentionally NOT a trading chain here. SPL trading approval
+  // was retired (depositWatcher TRADING_CHAINS = ["TRC20"]; the delegate's
+  // SPL trading executor isn't provisioned in prod), and a card for it just
+  // 500'd on connect. Solana's only role now is USDC deposits, handled by
+  // <DepositApprovalCard> further down this page.
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

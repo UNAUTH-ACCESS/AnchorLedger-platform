@@ -11,6 +11,7 @@
 
 const prisma = require("../lib/prisma");
 const logger = require("../lib/logger");
+const { AppError } = require("../middleware/error");
 
 // Single source of truth for annualization: derive periods-per-year from the
 // actual configured snapshot cadence (same env var the worker uses to take
@@ -50,7 +51,7 @@ async function generateReport(portfolioId, period = "monthly") {
     }),
   ]);
 
-  if (!portfolio) throw new Error(`Portfolio ${portfolioId} not found`);
+  if (!portfolio) throw new AppError("Portfolio not found", 404, "NOT_FOUND");
 
   // ── P&L metrics ───────────────────────────────────────────────────────────
   const totalTrades   = positions.length;

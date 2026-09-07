@@ -153,8 +153,13 @@ router.post("/:id/link-confirm", authenticate, requireKycApproved, async (req, r
     const statusRes = await delegatePost("/status", { chains: [chainKey], addresses });
     const chainStatus = (statusRes.statuses || []).find(s => s.chain === chainKey);
     if (!chainStatus || chainStatus.error) {
+      // Log the real reason; don't hand the delegate's internal error text
+      // (which can carry file paths / a require stack) to the client.
+      logger.warn("[wallets] link-confirm — delegate status unavailable", {
+        walletId: req.params.id, chainKey, reason: chainStatus?.error || "no status returned",
+      });
       throw new AppError(
-        "Could not verify on-chain approval: " + (chainStatus?.error || "no status returned"),
+        "Could not verify the approval on-chain right now. Please try again in a moment.",
         400, "DELEGATE_STATUS_UNAVAILABLE"
       );
     }
