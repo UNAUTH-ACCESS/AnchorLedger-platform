@@ -104,6 +104,59 @@ async function getActiveChainsForUser(userId, workspaceId) {
   return byChain; // e.g. { TRC20: "T..." }
 }
 
+// Statuses that mean "there is already a deposit for this wallet that must
+// resolve before another one is created". DETECTED/VAULTED/MINTED = actively
+// mid-flow; ALLOC_FAILED/PARTIAL = the USDC is already in the vault and the
+// user is owed an allocation — a second balance-poll must never stack a
+// duplicate on top of that. (SWEEP_FAILED is deliberately not here: the
+// money never moved, so a fresh attempt next cycle is correct — but see the
+// short back-off below so it isn't retried every single tick.)
+const BLOCKING_STATUSES = ["DETECTED", "VAULTED", "MINTED", "ALLOC_FAILED", "PARTIAL"];
+const ORPHAN_AGE_MS = 10 * 60 * 1000;
+const SWEEP_RETRY_BACKOFF_MS = 5 * 60 * 1000;
+
+/**
+ * Guard against creating a duplicate/phantom deposit. The only thing that
+ * previously stopped double-processing was "on-chain balance is ~0 after a
+ * successful sweep" — which does nothing for a deposit orphaned mid-flow, a
+ * stale balance read, or a sweep whose HTTP response was lost.
+ *
+ * Returns a string reason to skip, or null to proceed.
+ */
+async function blockingDepositReason(walletId) {
+  const latest = await prisma.deposit.findFirst({
+    where: { walletId },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!latest) return null;
+
+  const ageMs = Date.now() - new Date(latest.createdAt).getTime();
+
+  if (BLOCKING_STATUSES.includes(latest.status)) {
+    if (ageMs > ORPHAN_AGE_MS) {
+      // Orphaned — the process handling it almost certainly crashed. Loud,
+      // but still skip: resolving it (retry the allocation vs refund) is a
+      // money decision for an admin, and vaultReconciliation.job.js already
+      // alerts on the resulting ledger/vault discrepancy.
+      logger.error("[depositWatcher] Deposit orphaned mid-flow — needs manual resolution", {
+        depositId: latest.id, walletId, status: latest.status,
+        ageMinutes: Math.round(ageMs / 60000),
+      });
+    }
+    return `existing ${latest.status} deposit ${latest.id}`;
+  }
+
+  // A recent failed attempt (sweep never landed, or a legacy FAILED row):
+  // safe to retry, but not every 60s. Without this back-off the pre-
+  // re-entrancy loop once created 10 FAILED rows for one wallet in 10
+  // minutes.
+  if (["SWEEP_FAILED", "FAILED"].includes(latest.status) && ageMs < SWEEP_RETRY_BACKOFF_MS) {
+    return `recent ${latest.status} deposit ${latest.id} — backing off`;
+  }
+
+  return null;
+}
+
 /**
  * Process a single detected deposit through the full sweep + allocate flow.
  */
@@ -113,6 +166,14 @@ async function processDeposit(wallet) {
 
   if (!usdcBalance || usdcBalance < MIN_DEPOSIT_USDC) {
     return null; // nothing to do
+  }
+
+  const skipReason = await blockingDepositReason(wallet.id);
+  if (skipReason) {
+    logger.warn("[depositWatcher] Skipping deposit cycle for wallet", {
+      walletId: wallet.id, reason: skipReason,
+    });
+    return null;
   }
 
   logger.info("[depositWatcher] USDC deposit detected", {
@@ -170,8 +231,26 @@ async function processDeposit(wallet) {
       amounts
     });
 
-    const allFailed = allocation.summary.succeeded === 0;
-    const status = allFailed ? "FAILED" : "COMPLETE";
+    // The USDC is in the vault at this point (VAULTED above). Allocation is
+    // the mint-and-send of MockUSDT to the user's trading wallets:
+    //   all succeeded        -> COMPLETE
+    //   some succeeded        -> PARTIAL  (user under-allocated; needs a top-up)
+    //   none succeeded        -> ALLOC_FAILED (money vaulted, nothing allocated)
+    // PARTIAL used to be silently marked COMPLETE.
+    const { succeeded, failed } = allocation.summary;
+    const failedChains = (allocation.summary.chains?.failed || [])
+      .map(f => `${f.chain}: ${f.error}`).join("; ");
+
+    let status, errorMessage = null;
+    if (succeeded === 0) {
+      status = "ALLOC_FAILED";
+      errorMessage = `All chain allocations failed${failedChains ? ` (${failedChains})` : ""}`;
+    } else if (failed > 0) {
+      status = "PARTIAL";
+      errorMessage = `Allocated ${succeeded}/${succeeded + failed} chains; failed: ${failedChains}`;
+    } else {
+      status = "COMPLETE";
+    }
 
     await prisma.deposit.update({
       where: { id: deposit.id },
@@ -179,7 +258,7 @@ async function processDeposit(wallet) {
         status,
         allocations: allocation.results,
         completedAt: status === "COMPLETE" ? new Date() : null,
-        errorMessage: allFailed ? "All chain allocations failed" : null
+        errorMessage,
       }
     });
 
@@ -196,21 +275,31 @@ async function processDeposit(wallet) {
       depositId: deposit.id, status, succeeded: allocation.summary.succeeded, failed: allocation.summary.failed
     });
 
-    if (status === "COMPLETE") {
-      sendDepositComplete(wallet.userId, wallet.workspaceId, { usdcAmount: usdcBalance }).catch(() => {});
-    } else {
+    // COMPLETE and PARTIAL both mean the user received funds — a "failed"
+    // email would be wrong. ALLOC_FAILED means the USDC is vaulted but
+    // nothing reached them.
+    if (status === "ALLOC_FAILED") {
       sendDepositFailed(wallet.userId, wallet.workspaceId, { usdcAmount: usdcBalance, vaulted: true }).catch(() => {});
+    } else {
+      sendDepositComplete(wallet.userId, wallet.workspaceId, { usdcAmount: usdcBalance }).catch(() => {});
     }
 
     return deposit;
 
   } catch (err) {
+    // vaulted === false  -> the sweep itself failed/was never confirmed; the
+    //   USDC never left the user's wallet, so a fresh attempt next cycle is
+    //   safe (SWEEP_RETRY_BACKOFF_MS throttles it).
+    // vaulted === true   -> USDC is in the vault but allocation threw; this
+    //   is a money-owed state, not a plain failure — vaultReconciliation
+    //   will flag the discrepancy for an admin.
+    const failStatus = vaulted ? "ALLOC_FAILED" : "SWEEP_FAILED";
     logger.error("[depositWatcher] Deposit processing failed", {
-      depositId: deposit.id, error: err.message
+      depositId: deposit.id, status: failStatus, vaulted, error: err.message,
     });
     await prisma.deposit.update({
       where: { id: deposit.id },
-      data: { status: "FAILED", errorMessage: err.message }
+      data: { status: failStatus, errorMessage: err.message }
     });
     sendDepositFailed(wallet.userId, wallet.workspaceId, { usdcAmount: usdcBalance, vaulted }).catch(() => {});
     return deposit;
