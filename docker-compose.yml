@@ -15,6 +15,9 @@ services:
     container_name: quantedge_postgres
     restart: unless-stopped
     logging: *default-logging
+    mem_limit: 384m
+    mem_reservation: 128m
+    pids_limit: 256
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-quantedge}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantedge_secret}
@@ -30,6 +33,10 @@ services:
       - internal
 
   api:
+    # CI (.github/workflows/build-images.yml) builds and pushes this; the VPS
+    # only pulls. `build:` stays as a local fallback — `docker compose build`
+    # still works offline, it just tags the result as this image name.
+    image: ghcr.io/unauth-access/anchorledger-api:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -37,6 +44,11 @@ services:
     container_name: anchorledger_api
     restart: unless-stopped
     logging: *default-logging
+    # Ceilings, not reservations — one runaway container has OOM'd the whole
+    # box before. Node steady-state here is well under 100 MB.
+    mem_limit: 320m
+    mem_reservation: 96m
+    pids_limit: 256
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,6 +88,7 @@ services:
       - internal
 
   worker:
+    image: ghcr.io/unauth-access/anchorledger-worker:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -83,6 +96,9 @@ services:
     container_name: anchorledger_worker
     restart: unless-stopped
     logging: *default-logging
+    mem_limit: 320m
+    mem_reservation: 96m
+    pids_limit: 256
     depends_on:
       postgres:
         condition: service_healthy
@@ -127,12 +143,15 @@ services:
   # (both tried to bind :3001). Removed rather than left as a footgun.
 
   frontend:
+    image: ghcr.io/unauth-access/anchorledger-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: anchorledger_frontend
     restart: unless-stopped
     logging: *default-logging
+    mem_limit: 64m
+    pids_limit: 128
     networks:
       - internal
 
@@ -141,6 +160,8 @@ services:
     container_name: anchorledger_nginx
     restart: unless-stopped
     logging: *default-logging
+    mem_limit: 96m
+    pids_limit: 128
     ports:
       - "80:80"
       - "443:443"

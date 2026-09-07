@@ -1,0 +1,19 @@
+# Build context hygiene — without this, `COPY . .` shipped the host's
+# node_modules (~230 MB), .git, tests and local storage into the image and
+# the build context, on a box where every MB of I/O and daemon memory
+# counts. Only what the image actually needs is copied in the Dockerfile.
+node_modules
+npm-debug.log*
+.git
+.gitignore
+.dockerignore
+Dockerfile
+tests
+docs
+jest.config.js
+storage/kyc-docs
+prisma/migrations_broken_backup
+*.md
+.env
+.env.*
+!.env.example

@@ -38,14 +38,25 @@ async function pgNotify(channel, payload) {
 }
 
 async function delegatePost(endpoint, body) {
-  const res = await fetch(`${config.DELEGATE_SERVER_URL}${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-delegate-secret": config.DELEGATE_SHARED_SECRET,
-    },
-    body: JSON.stringify(body)
-  });
+  // Node's fetch has no default timeout — a hung RPC call on the delegate
+  // side would otherwise stall this whole deposit cycle indefinitely.
+  let res;
+  try {
+    res = await fetch(`${config.DELEGATE_SERVER_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-delegate-secret": config.DELEGATE_SHARED_SECRET,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (err) {
+    if (err.name === "TimeoutError" || err.name === "AbortError") {
+      throw new Error(`Delegate server timed out at ${endpoint}`);
+    }
+    throw err;
+  }
   const data = await res.json();
   if (!data.success) throw new Error(data.error || `Delegate error at ${endpoint}`);
   return data;

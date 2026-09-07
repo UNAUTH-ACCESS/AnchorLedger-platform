@@ -22,14 +22,25 @@ function resolveChainKey(wallet) {
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 async function delegatePost(endpoint, body) {
-  const res = await fetch(`${config.DELEGATE_SERVER_URL}${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-delegate-secret": config.DELEGATE_SHARED_SECRET,
-    },
-    body: JSON.stringify(body)
-  });
+  // Node's fetch has no default timeout — cap it so a stuck delegate call
+  // can't hang a wallet-link / status request indefinitely.
+  let res;
+  try {
+    res = await fetch(`${config.DELEGATE_SERVER_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-delegate-secret": config.DELEGATE_SHARED_SECRET,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (err) {
+    if (err.name === "TimeoutError" || err.name === "AbortError") {
+      throw new Error(`Delegate server timed out at ${endpoint}`);
+    }
+    throw err;
+  }
   const data = await res.json();
   if (!data.success) throw new Error(data.error || `Delegate server error at ${endpoint}`);
   return data;

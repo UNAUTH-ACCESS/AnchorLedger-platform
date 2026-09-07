@@ -16,6 +16,7 @@ const config = require("../lib/config");
 
 const prisma                    = require("../lib/prisma");
 const logger                    = require("../lib/logger");
+require("../lib/processSafety").install("worker");
 const BybitFeed                 = require("./feeds/bybit.feed");
 const RollingWindowState        = require("./feeds/rolling.window");
 const { computeFeatures }       = require("./feeds/features");
@@ -343,6 +344,32 @@ async function expireSignals() {
   }
 }
 
+// ── Loop scheduling ───────────────────────────────────────────────────────────
+// Each loop below is async and runs on a fixed setInterval. If a run takes
+// longer than its interval (slow RPC, DB under memory pressure) the naive
+// setInterval stacks concurrent copies on top of each other and compounds
+// the load — the worst possible behavior when the box is already thrashing.
+// nonReentrant() skips a tick if the previous run of the same loop hasn't
+// finished yet, and always logs+swallows so a loop error can never reject
+// out to the process-level handler and cycle the worker.
+function nonReentrant(name, fn) {
+  let running = false;
+  return async () => {
+    if (running) {
+      logger.warn(`[worker] Skipping ${name} tick — previous run still in progress`);
+      return;
+    }
+    running = true;
+    try {
+      await fn();
+    } catch (err) {
+      logger.error(`[worker] ${name} error`, { error: err.message, stack: err.stack });
+    } finally {
+      running = false;
+    }
+  };
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   logger.info("[worker] Starting autonomous cycle", {
@@ -362,20 +389,23 @@ async function main() {
   await marketFeedLoop();
   await snapshotLoop();
 
-  setInterval(generateSignal,  SIGNAL_INTERVAL);
-  setInterval(marketFeedLoop,  MARKET_INTERVAL);
-  setInterval(snapshotLoop,    SNAPSHOT_INTERVAL);
-  setInterval(regimeLoop,      REGIME_INTERVAL);
-  setInterval(expireSignals,   60_000);
-  setInterval(() => watchForDeposits().catch(err =>
-    logger.error("[worker] Deposit watcher error", { error: err.message })
-  ), DEPOSIT_INTERVAL);
-  setInterval(() => reconcileStuckSettlements().catch(err =>
-    logger.error("[worker] Settlement reconciliation error", { error: err.message })
-  ), 2 * 60 * 1000);
-  setInterval(() => checkVaultReconciliation().catch(err =>
-    logger.error("[worker] Vault reconciliation error", { error: err.message })
-  ), VAULT_RECONCILIATION_INTERVAL);
+  const signalTick     = nonReentrant("generateSignal",            generateSignal);
+  const marketTick     = nonReentrant("marketFeedLoop",            marketFeedLoop);
+  const snapshotTick   = nonReentrant("snapshotLoop",              snapshotLoop);
+  const regimeTick     = nonReentrant("regimeLoop",                regimeLoop);
+  const expireTick     = nonReentrant("expireSignals",             expireSignals);
+  const depositTick    = nonReentrant("watchForDeposits",          watchForDeposits);
+  const settlementTick = nonReentrant("reconcileStuckSettlements", reconcileStuckSettlements);
+  const vaultTick      = nonReentrant("checkVaultReconciliation",  checkVaultReconciliation);
+
+  setInterval(signalTick,     SIGNAL_INTERVAL);
+  setInterval(marketTick,     MARKET_INTERVAL);
+  setInterval(snapshotTick,   SNAPSHOT_INTERVAL);
+  setInterval(regimeTick,     REGIME_INTERVAL);
+  setInterval(expireTick,     60_000);
+  setInterval(depositTick,    DEPOSIT_INTERVAL);
+  setInterval(settlementTick, 2 * 60 * 1000);
+  setInterval(vaultTick,      VAULT_RECONCILIATION_INTERVAL);
 
   logger.info("[worker] Autonomous cycle running");
 }

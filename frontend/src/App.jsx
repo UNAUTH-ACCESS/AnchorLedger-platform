@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { RouteGuard } from "./components/auth/RouteGuard";
 import { AppShell } from "./components/layout/AppShell";
 import { useSocket } from "./hooks/useSocket";
@@ -11,35 +11,55 @@ import { initChat, hideChat } from "./lib/chat";
 import { onConsentChange } from "./lib/consent";
 import CookieConsentBanner from "./components/consent/CookieConsentBanner";
 
-// Pages
-import LoginPage    from "./pages/login/LoginPage";
-import SignupPage   from "./pages/login/SignupPage";
-import VerifyEmailPage from "./pages/verify-email/VerifyEmailPage";
-import ForgotPasswordPage from "./pages/forgot-password/ForgotPasswordPage";
-import ResetPasswordPage  from "./pages/reset-password/ResetPasswordPage";
-import Dashboard    from "./pages/dashboard/Dashboard";
-import Signals      from "./pages/signals/Signals";
-import Proposals    from "./pages/proposals/Proposals";
-import Positions    from "./pages/positions/Positions";
-import Portfolio    from "./pages/portfolio/Portfolio";
-import AuditLog     from "./pages/audit/AuditLog";
-import Settings       from "./pages/settings/Settings";
-import WalletConnect  from "./pages/wallets/WalletConnect";
-import PnLDashboard  from "./pages/pnl/PnLDashboard";
-import SubscribePage   from "./pages/subscribe/SubscribePage";
-import OnboardingPage from "./pages/onboarding/OnboardingPage";
-import AdminKycQueue from "./pages/admin/AdminKycQueue";
-import AdminOperations from "./pages/admin/AdminOperations";
-import WalletCallback from "./pages/wallets/WalletCallback";
-import Terms from "./pages/legal/Terms";
-import Privacy from "./pages/legal/Privacy";
-import ArchitecturePage from "./pages/architecture/ArchitecturePage";
-import SecurityPage from "./pages/security/SecurityPage";
-import KycSubmission from "./pages/kyc/KycSubmission";
-import WithdrawalPage from "./pages/withdrawals/WithdrawalPage";
-import HomePage from "./pages/home/HomePage";
-import BlogIndex from "./pages/blog/BlogIndex";
-import BlogPost from "./pages/blog/BlogPost";
+// Eager — the first-paint critical path (marketing landing + the auth
+// entry points a logged-out visitor hits immediately).
+import HomePage    from "./pages/home/HomePage";
+import LoginPage   from "./pages/login/LoginPage";
+import SignupPage  from "./pages/login/SignupPage";
+
+// Lazy — everything behind auth, plus secondary marketing/legal pages. This
+// is what keeps the wallet SDKs (@solana/web3.js, tronweb, @tronweb3 — the
+// bulk of the old single bundle) off the landing/login path: they only load
+// when someone actually opens /wallets or /onboarding.
+const VerifyEmailPage    = lazy(() => import("./pages/verify-email/VerifyEmailPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/forgot-password/ForgotPasswordPage"));
+const ResetPasswordPage  = lazy(() => import("./pages/reset-password/ResetPasswordPage"));
+const SubscribePage      = lazy(() => import("./pages/subscribe/SubscribePage"));
+const Terms              = lazy(() => import("./pages/legal/Terms"));
+const Privacy            = lazy(() => import("./pages/legal/Privacy"));
+const ArchitecturePage   = lazy(() => import("./pages/architecture/ArchitecturePage"));
+const SecurityPage       = lazy(() => import("./pages/security/SecurityPage"));
+const BlogIndex          = lazy(() => import("./pages/blog/BlogIndex"));
+const BlogPost           = lazy(() => import("./pages/blog/BlogPost"));
+const OnboardingPage     = lazy(() => import("./pages/onboarding/OnboardingPage"));
+const WalletCallback     = lazy(() => import("./pages/wallets/WalletCallback"));
+
+const Dashboard      = lazy(() => import("./pages/dashboard/Dashboard"));
+const Signals        = lazy(() => import("./pages/signals/Signals"));
+const Proposals      = lazy(() => import("./pages/proposals/Proposals"));
+const Positions      = lazy(() => import("./pages/positions/Positions"));
+const Portfolio      = lazy(() => import("./pages/portfolio/Portfolio"));
+const AuditLog       = lazy(() => import("./pages/audit/AuditLog"));
+const Settings       = lazy(() => import("./pages/settings/Settings"));
+const WalletConnect  = lazy(() => import("./pages/wallets/WalletConnect"));
+const PnLDashboard   = lazy(() => import("./pages/pnl/PnLDashboard"));
+const AdminKycQueue  = lazy(() => import("./pages/admin/AdminKycQueue"));
+const AdminOperations = lazy(() => import("./pages/admin/AdminOperations"));
+const KycSubmission  = lazy(() => import("./pages/kyc/KycSubmission"));
+const WithdrawalPage = lazy(() => import("./pages/withdrawals/WithdrawalPage"));
+
+function RouteFallback() {
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#0A0A0F",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+      color: "#5A6478", letterSpacing: "0.06em",
+    }}>
+      Loading…
+    </div>
+  );
+}
 
 function RootRoute() {
   const { status } = useAuthStore();
@@ -47,16 +67,7 @@ function RootRoute() {
   // Don't flash the marketing page for a returning session that's about to
   // resolve to "authenticated" — same loading treatment RouteGuard uses.
   if (status === "authenticating") {
-    return (
-      <div style={{
-        minHeight: "100vh", background: "#0A0A0F",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-        color: "#5A6478", letterSpacing: "0.06em",
-      }}>
-        Loading…
-      </div>
-    );
+    return <RouteFallback />;
   }
 
   if (status === "authenticated") {
@@ -84,22 +95,24 @@ function AuthenticatedApp() {
 
   return (
     <AppShell>
-      <Routes>
-        <Route path="/dashboard"  element={<Dashboard/>} />
-        <Route path="/signals"    element={<Signals/>}   />
-        <Route path="/proposals"  element={<Proposals/>} />
-        <Route path="/positions"  element={<Positions/>} />
-        <Route path="/portfolio"  element={<Portfolio/>} />
-        <Route path="/audit"      element={<AuditLog/>}  />
-        <Route path="/settings"   element={<Settings/>}  />
-        <Route path="/wallets"   element={<WalletConnect/>} />
-        <Route path="/withdrawals" element={<WithdrawalPage/>} />
-        <Route path="/pnl"      element={<PnLDashboard/>} />
-        <Route path="/admin/kyc"  element={<AdminKycQueue/>} />
-        <Route path="/admin/ops"  element={<AdminOperations/>} />
-        <Route path="/kyc"        element={<KycSubmission/>} />
-        <Route path="*"           element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/dashboard"  element={<Dashboard/>} />
+          <Route path="/signals"    element={<Signals/>}   />
+          <Route path="/proposals"  element={<Proposals/>} />
+          <Route path="/positions"  element={<Positions/>} />
+          <Route path="/portfolio"  element={<Portfolio/>} />
+          <Route path="/audit"      element={<AuditLog/>}  />
+          <Route path="/settings"   element={<Settings/>}  />
+          <Route path="/wallets"   element={<WalletConnect/>} />
+          <Route path="/withdrawals" element={<WithdrawalPage/>} />
+          <Route path="/pnl"      element={<PnLDashboard/>} />
+          <Route path="/admin/kyc"  element={<AdminKycQueue/>} />
+          <Route path="/admin/ops"  element={<AdminOperations/>} />
+          <Route path="/kyc"        element={<KycSubmission/>} />
+          <Route path="*"           element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Suspense>
     </AppShell>
   );
 }
@@ -131,6 +144,7 @@ export default function App() {
 
   return (
     <>
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       <Route path="/" element={<RootRoute/>} />
       {/* Unconditional — RootRoute above redirects an authenticated session
@@ -167,6 +181,7 @@ export default function App() {
         </RouteGuard>
       }/>
     </Routes>
+    </Suspense>
     <CookieConsentBanner/>
     </>
   );

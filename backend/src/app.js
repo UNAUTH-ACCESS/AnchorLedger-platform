@@ -23,6 +23,7 @@ const config = require("./lib/config");
 config.assertApiConfig(); // this process also needs JWT + CORS validated
 
 const logger = require("./lib/logger");
+require("./lib/processSafety").install("api");
 const { initSocket } = require("./lib/socket");
 const prisma = require("./lib/prisma");
 const { notFound, errorHandler } = require("./middleware/error");
@@ -127,11 +128,26 @@ server.listen(PORT, () => {
   logger.info(`Anchor Ledger API running on port ${PORT}`);
 });
 
-// Graceful shutdown
-process.on("SIGTERM", async () => {
-  logger.info("API shutting down...");
-  await prisma.$disconnect();
-  server.close(() => process.exit(0));
+// A bind failure (port in use, permission) surfaces here as an 'error'
+// event — without a handler that's an unhandled throw and a bare crash.
+server.on("error", (err) => {
+  logger.error("HTTP server error", { error: err.message, code: err.code });
+  process.exit(1);
 });
+
+// Graceful shutdown — stop accepting new connections and let in-flight
+// requests drain BEFORE disconnecting Prisma (doing it the other way round
+// yanked the DB out from under requests that were still running). Hard cap
+// so a single hung connection can't block the restart forever.
+function shutdown(signal) {
+  logger.info(`API shutting down (${signal})...`);
+  server.close(async () => {
+    await prisma.$disconnect().catch(() => {});
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(0), 10_000).unref();
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 module.exports = { app, server };
