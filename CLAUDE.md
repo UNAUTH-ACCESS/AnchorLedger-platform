@@ -22,9 +22,20 @@ detail — no feature may quietly turn it into custody.
 - Ops user `solana` (uid 1000, sudo + docker). Non-root. **Key-only SSH; root login disabled.**
 - `sudo` requires a TTY here — non-interactive `sudo` fails. For `dmesg`/log checks
   the user must run the command themselves (`! <cmd>` in the Claude prompt).
-- RAM is tight: 1.9 GiB total, dockerd ~1 GB RSS, this Claude session ~300 MB standing,
-  swap normally ~1.3/2.5 GiB used. Check `free -h` before any `docker compose build`;
-  build one service at a time. Real fix (not yet done): move builds to CI, push finished images.
+- RAM is tight: 1.9 GiB total. dockerd creeps toward ~1 GB RSS over weeks (leak /
+  build-cache bookkeeping) — `systemctl restart docker` reclaims it back to ~150 MB;
+  do this if `free -h` shows the box thrashing. Each Claude session adds ~300 MB standing.
+- **Image builds now run in CI** (`.github/workflows/build-images.yml`) and push to GHCR;
+  the VPS only `docker compose pull`s. Deploy with `./scripts/deploy.sh` (pull + prisma
+  migrate deploy + `up -d` + prune). `build:` blocks stay in docker-compose.yml as a
+  local fallback — if you must build on the box, `free -h` first, one service at a time,
+  and note dockerd needs a restart afterward to release the build memory.
+- Every compose service has `mem_limit` / `pids_limit` (ceilings, not reservations) so
+  one runaway can't OOM the box. Backend image is ~470 MB (multi-stage, `--omit=dev`).
+- Frontend bundle is route-split (`React.lazy` + `manualChunks`): the wallet SDKs
+  (`@solana/web3.js`, `tronweb`, `@tronweb3`) load only on `/wallets` and `/onboarding`,
+  not the marketing path. Don't add a static import of those from an eager module, and
+  don't give the wallet libs a *named* `manualChunks` entry (Vite then modulepreloads it).
 
 ## Topology
 
@@ -32,8 +43,11 @@ detail — no feature may quietly turn it into custody.
 |---|---|---|
 | delegate-server | HOST (not Docker) | PM2, name `delegate-server`; containers reach it via `host.docker.internal` (host-gateway, never a hardcoded bridge IP) |
 | api / worker / frontend / nginx / postgres | Docker | `docker compose`, containers `anchorledger_*` (postgres still `quantedge_postgres`) |
-| delegate-server watchdog | HOST | cron, `scripts/delegate-watchdog.sh` — **must stay committed to git** |
+| delegate-server watchdog | HOST | cron `*/5`, `scripts/delegate-watchdog.sh` — **must stay committed to git** |
 | Claude Code (server-side) | HOST | tmux session + `/remote-control`. If gone: `tmux ls`; if nothing, `tmux new -s claude` → `claude` → `/remote-control`. |
+
+delegate-server is defined by `ecosystem.config.js` in the delegate repo (`max_memory_restart`
+200M, `max_restarts` 10). Apply changes with `pm2 startOrReload ecosystem.config.js && pm2 save`.
 
 ## The core operating principle
 
@@ -82,6 +96,18 @@ passphrase generation, DB writes to financial tables, SSH/auth hardening):
 
 ## Open items to verify, never assume
 
+- **CI is committed but not yet live**: `.github/workflows/build-images.yml` needs
+  `gh auth login` done once (interactive, by the user) and the first run to succeed +
+  the GHCR packages made public (or a `docker login ghcr.io` on the box). Until then,
+  `docker compose build` on the box is still the deploy path.
+- **delegate-server `/health` reports `degraded`** because the SPL (devnet MockUSDT
+  *trading*) executor can't load `server/solana-deployment.json` — that file has never
+  existed on this box and there's no devnet Solana validator in prod. This is expected:
+  SPL trading isn't used (`TRADING_CHAINS = ["TRC20"]`), and the real Solana money path
+  (`SPL_USDC_MAINNET`, deposit sweep) is `available: true`. Don't chase it as a regression.
+- **`clients.routes.js` admin metric** filters deposits on `status === "MINTED"` for
+  "totalDeposited" — MINTED is a transient mid-flow state; this almost certainly should
+  be `COMPLETE`. Pre-existing, not yet fixed.
 - **Backups**: automated offsite backups were deferred at the last rebuild. Nightly
   `~/backups/quantedge-*.sql.gz` dumps exist locally — confirm a recent one is real before
   trusting it, and there is no verified offsite copy.
