@@ -16,3 +16,4 @@ nginx/certbot/
 backend/storage/kyc-docs/
 backend/prisma/migrations_broken_backup/
 frontend/public/debug-tron.html
+nginx/.htpasswd*
