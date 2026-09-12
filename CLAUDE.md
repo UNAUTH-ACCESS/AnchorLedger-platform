@@ -42,6 +42,22 @@ detail — no feature may quietly turn it into custody.
   (`@solana/web3.js`, `tronweb`, `@tronweb3`) load only on `/wallets` and `/onboarding`,
   not the marketing path. Don't add a static import of those from an eager module, and
   don't give the wallet libs a *named* `manualChunks` entry (Vite then modulepreloads it).
+- **Frontend serving moved off the VPS to GitHub Pages (2026-09-12).** `.github/workflows/
+  deploy-pages.yml` builds `frontend/` and publishes to `unauth-access.github.io/
+  AnchorLedger-platform` on every push touching it — including a `404.html` (copy of
+  `index.html`) for the SPA client-route fallback (Pages has no server-side rewrite).
+  `nginx/active.conf`'s `location /` for anchorledger.space proxies there instead of to
+  the local `frontend` container — same origin from the browser's POV, no CORS/cookie
+  changes needed. Two things that only surfaced during cutover, don't re-break them:
+  - `resolver ... ipv6=off` is required — this container's docker network has no IPv6
+    route (the host does, the bridge doesn't), so unauth-access.github.io's AAAA records
+    fail instantly and, uncorrected, exhaust nginx's retries.
+  - Pages' extensionless-path redirects (`/blog` → `/blog/`) must stay intercepted
+    (`error_page 301 302 = @pages_dir_index`, refetching `<path>/index.html` directly) —
+    otherwise the raw `github.io` origin leaks into the client's Location header.
+  The local `frontend` container is still built/deployed and left running, unused, as an
+  immediate rollback (`docker compose start frontend` is redundant, it's already up —
+  just swap `location /`'s `proxy_pass` back to `$upstream_frontend`).
 
 ## Topology
 
