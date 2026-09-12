@@ -1,0 +1,295 @@
+# Rate-limit zone for the JAP Console login (its only auth gate).
+limit_req_zone $binary_remote_addr zone=jap_login:1m rate=10r/m;
+
+# Anchor Ledger Nginx Configuration
+# Single public entry point for the entire application
+
+# Redirect all HTTP to HTTPS
+server {
+    listen 80;
+    server_name anchorledger.duckdns.org anchorledger.space www.anchorledger.space;
+    server_tokens off;
+
+    # Let's Encrypt ACME challenge
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# Situation Wire — HTTP: ACME challenge + redirect to HTTPS.
+server {
+    listen 80;
+    server_name situationwire.duckdns.org;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# Situation Wire — HTTPS. Proxies to the Node service running on the host
+# (systemd unit situation-wire, localhost:3000) via the docker host-gateway.
+# Not part of the Anchor Ledger app — separate site, same nginx.
+server {
+    listen 443 ssl;
+    server_name situationwire.duckdns.org;
+
+    ssl_certificate     /etc/letsencrypt/live/situationwire.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/situationwire.duckdns.org/privkey.pem;
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_ciphers               ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       1d;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Frame-Options           SAMEORIGIN                            always;
+    add_header X-Content-Type-Options    nosniff                               always;
+    add_header Referrer-Policy           strict-origin-when-cross-origin        always;
+
+    # Cover media: images capped at 10MB, videos at 64MB in the app.
+    client_max_body_size 72m;
+
+    location / {
+        proxy_pass         http://host.docker.internal:3000;
+        proxy_request_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    gzip            on;
+    gzip_vary       on;
+    gzip_min_length 1024;
+    gzip_types      text/plain text/css application/json application/javascript
+                    text/xml application/xml application/xml+rss text/javascript
+                    image/svg+xml;
+}
+
+# HTTPS — legacy DuckDNS domain: redirect-only.
+# Was the real content host as a pre-launch stopgap; now that
+# anchorledger.space is live, serving identical app content on both was a
+# real duplicate-content problem - Google Search Console flagged the
+# canonical URL as "Duplicate without user-selected canonical" because of
+# exactly this (plus the www split below). A redirect is a hard signal
+# search engines trust; a <link rel="canonical"> tag alone is only a hint.
+server {
+    listen 443 ssl;
+    server_name anchorledger.duckdns.org;
+
+    ssl_certificate     /etc/letsencrypt/live/anchorledger.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/anchorledger.duckdns.org/privkey.pem;
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_ciphers               ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+
+    location / {
+        return 301 https://anchorledger.space$request_uri;
+    }
+}
+
+# HTTPS — www: redirect-only, same reason as above. The cert already
+# covers both as SANs (issued together), so no separate cert is needed
+# just to terminate TLS before redirecting.
+server {
+    listen 443 ssl;
+    server_name www.anchorledger.space;
+
+    ssl_certificate     /etc/letsencrypt/live/anchorledger.space/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/anchorledger.space/privkey.pem;
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_ciphers               ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+
+    location / {
+        return 301 https://anchorledger.space$request_uri;
+    }
+}
+
+# HTTPS — anchorledger.space: the one canonical content-serving host.
+server {
+    listen 443 ssl;
+    server_name anchorledger.space;
+    server_tokens off;
+
+    ssl_certificate     /etc/letsencrypt/live/anchorledger.space/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/anchorledger.space/privkey.pem;
+
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_ciphers               ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       1d;
+
+    resolver 127.0.0.11 valid=10s;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Frame-Options           SAMEORIGIN                                   always;
+    add_header X-Content-Type-Options    nosniff                                always;
+    add_header Referrer-Policy           strict-origin-when-cross-origin        always;
+    # Structural hardening that can't break the SPA or its opt-in third
+    # parties: no plugin content, no <base> hijack, forms can only post to
+    # our own origin, and framing is same-origin only (mirrors X-Frame-
+    # Options for browsers that prefer CSP). Script/style/connect are left
+    # unrestricted here — a full source-list CSP needs its own tested pass
+    # against the consent-gated PostHog + Smartsupp integrations.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+
+    # ─────────────────────────────────────────────────────────────────────
+    # PAUSED 2026-09-10 — the AnchorLedger app containers (api/worker/
+    # frontend) and delegate-server are stopped for maintenance. Every
+    # request to anchorledger.space returns 503 + Retry-After so search
+    # engines treat the outage as temporary and don't de-index.
+    #
+    # TO RESUME: restore the four proxy location blocks below from this
+    # file's git history (commit cb1066b or earlier) — or from
+    # scratchpad/active.conf.pre-maintenance-1789046956 — then
+    #   docker compose start api worker frontend
+    #   pm2 start delegate-server && (uncomment the delegate-watchdog cron)
+    #   docker compose up -d --force-recreate nginx
+    # The other vhosts in this file are untouched by the pause.
+    # ─────────────────────────────────────────────────────────────────────
+    location / {
+        default_type text/html;
+        add_header Retry-After 3600 always;
+        add_header Cache-Control "no-store" always;
+        return 503 "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Anchor Ledger - Maintenance</title><style>html,body{margin:0;height:100%}body{display:flex;align-items:center;justify-content:center;background:#0A0A0F;color:#C7CEDB;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}main{max-width:32rem;padding:2rem;text-align:center}h1{font-size:.95rem;font-weight:600;letter-spacing:.12em;color:#8B93A7;margin:0 0 1.25rem}p{font-size:.8rem;line-height:1.75;color:#5A6478;margin:.5rem 0}</style></head><body><main><h1>ANCHOR LEDGER</h1><p>The platform is briefly offline for scheduled maintenance.</p><p>Anchor Ledger is non-custodial: it never holds your assets, and your on-chain balances and delegate approvals are unaffected. Please check back shortly.</p></main></body></html>";
+    }
+
+    gzip            on;
+    gzip_vary       on;
+    gzip_min_length 1024;
+    gzip_types      text/plain text/css application/json application/javascript
+                    text/xml application/xml application/xml+rss text/javascript
+                    image/svg+xml;
+}
+
+# StackLegder — HTTP: ACME challenge + redirect to HTTPS.
+# Node service: systemd unit stacklegder, localhost:3002. Separate site, same nginx.
+server {
+    listen 80;
+    server_name stacklegder.online;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# StackLegder — HTTPS. Proxies to the host systemd service on localhost:3002.
+server {
+    listen 443 ssl;
+    server_name stacklegder.online;
+
+    ssl_certificate     /etc/letsencrypt/live/stacklegder.online/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/stacklegder.online/privkey.pem;
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_ciphers               ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       1d;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Frame-Options           SAMEORIGIN                            always;
+    add_header X-Content-Type-Options    nosniff                               always;
+    add_header Referrer-Policy           strict-origin-when-cross-origin        always;
+
+    client_max_body_size 72m;
+
+    location / {
+        proxy_pass         http://host.docker.internal:3002;
+        proxy_request_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    gzip            on;
+    gzip_vary       on;
+    gzip_min_length 1024;
+    gzip_types      text/plain text/css application/json application/javascript
+                    text/xml application/xml application/xml+rss text/javascript
+                    image/svg+xml;
+}
+
+# JAP Console — HTTP: ACME challenge + redirect to HTTPS.
+# Private admin tool (SMM order desk). Flask service: systemd unit
+# jap-console, localhost:8081. Separate site, same nginx.
+server {
+    listen 80;
+    server_name jap-console.139-162-181-164.sslip.io;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# JAP Console — HTTPS. noindex + login rate-limit; the app's own login
+# is the auth gate. Proxies to the host app over a unix socket.
+server {
+    listen 443 ssl;
+    server_name jap-console.139-162-181-164.sslip.io;
+    server_tokens off;
+
+    ssl_certificate     /etc/letsencrypt/live/jap-console.139-162-181-164.sslip.io/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/jap-console.139-162-181-164.sslip.io/privkey.pem;
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_ciphers               ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       1d;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Frame-Options           DENY                                  always;
+    add_header X-Content-Type-Options    nosniff                               always;
+    add_header Referrer-Policy           no-referrer                           always;
+    add_header X-Robots-Tag              "noindex, nofollow, noarchive"        always;
+
+
+    client_max_body_size 4m;
+
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+
+    location = /login {
+        limit_req zone=jap_login burst=5 nodelay;
+        proxy_pass         http://unix:/run/jap/jap.sock:;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass         http://unix:/run/jap/jap.sock:;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 180s;
+    }
+}

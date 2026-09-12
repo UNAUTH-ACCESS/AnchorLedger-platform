@@ -28,7 +28,10 @@ jobs:
 
       - name: Install
         working-directory: backend
-        run: npm ci --no-audit --no-fund
+        # npm install, not `npm ci`: the committed lockfile has a benign
+        # optional-dep resolution difference across npm versions (utf-8-
+        # validate) — same issue and same fix as backend/Dockerfile.
+        run: npm install --no-audit --no-fund
 
       - name: Jest
         working-directory: backend
