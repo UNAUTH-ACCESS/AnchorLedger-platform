@@ -45,6 +45,17 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: SPA fallback for GitHub Pages
+        # Pages has no server-side rewrite rule — it serves 404.html
+        # verbatim (status 404) for any path with no matching file. Making
+        # that file a copy of index.html is the standard SPA-on-Pages
+        # pattern: client-only routes (e.g. /dashboard, /login) still
+        # render the app, just under a 404 status, which is fine for
+        # routes that shouldn't be indexed anyway. Prerendered marketing/
+        # blog routes are real files and never hit this path.
+        working-directory: frontend
+        run: cp dist/index.html dist/404.html
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
