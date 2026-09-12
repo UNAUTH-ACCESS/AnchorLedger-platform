@@ -1,0 +1,39 @@
+name: test
+
+# Backend Jest suite. Every test here mocks Prisma/pg (see backend/tests/) —
+# no database, no service container, no secrets. This is pure upside: it
+# never ran in CI before, only ever on the VPS by hand.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/test.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+
+jobs:
+  jest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        working-directory: backend
+        run: npm ci --no-audit --no-fund
+
+      - name: Jest
+        working-directory: backend
+        run: npm test -- --ci
+
+      - name: npm audit (high+ only, report not block)
+        working-directory: backend
+        run: npm audit --audit-level=high || true
