@@ -23,7 +23,7 @@ function chainTypeToKey(chainType) {
 router.get("/", authenticate, requireWorkspace, async (req, res, next) => {
   try {
     const wallets = await prisma.wallet.findMany({
-      where: { workspaceId: req.workspace.id },
+      where: { workspaceId: req.workspace.id, status: { not: "DISCONNECTED" } },
       include: { chain: true },
       orderBy: { createdAt: "asc" },
     });
