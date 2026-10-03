@@ -129,6 +129,7 @@ export const kyc = {
   // even though the multipart body looked correct in the browser.
   submit: (formData) => client.post("/kyc/submit", formData, {
     headers: { "Content-Type": undefined },
+    timeout: 300000,
   }),
 
   // Admin-only (backend enforces requirePlatformAdmin regardless of what the
