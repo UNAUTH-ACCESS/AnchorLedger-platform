@@ -76,8 +76,29 @@ function SelectField({ label, required, options, ...props }) {
 function validateFile(file) {
   if (!file) return null;
   if (!ACCEPTED_TYPES.includes(file.type)) return "Only JPEG, PNG, or PDF files are accepted.";
-  if (file.size > MAX_FILE_BYTES) return "File must be under 8MB.";
+  if (file.type === "application/pdf" && file.size > MAX_FILE_BYTES) return "File must be under 8MB.";
   return null;
+}
+
+// Phone photos are 5-15MB; downscale to 1600px JPEG so uploads and reviewer downloads stay small.
+async function shrinkImage(file, maxDim = 1600, quality = 0.82) {
+  if (!file || file.type === "application/pdf") return file;
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", quality));
+    if (!blob || blob.size >= file.size) return file.size > MAX_FILE_BYTES ? null : file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file.size > MAX_FILE_BYTES ? null : file;
+  }
 }
 
 function FileUpload({ label, required, file, onChange, error }) {
@@ -294,9 +315,13 @@ export default function KycSubmission() {
       fd.append("attestNotPep", "true");
       fd.append("attestNoSanctions", "true");
       fd.append("attestAccurate", "true");
-      fd.append("idDocFront", idDocFront);
-      if (idDocBack) fd.append("idDocBack", idDocBack);
-      fd.append("selfie", selfie);
+      const [front, back, selfieSmall] = await Promise.all([shrinkImage(idDocFront), shrinkImage(idDocBack), shrinkImage(selfie)]);
+      if (!front || !selfieSmall || (idDocBack && !back)) {
+        throw new Error("Could not process one of the images. Please choose a smaller photo.");
+      }
+      fd.append("idDocFront", front);
+      if (back) fd.append("idDocBack", back);
+      fd.append("selfie", selfieSmall);
 
       const res = await kycApi.submit(fd);
       setExistingStatus(res.data.status);
