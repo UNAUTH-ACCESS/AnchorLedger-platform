@@ -135,7 +135,7 @@ export const kyc = {
   // Admin-only (backend enforces requirePlatformAdmin regardless of what the
   // client sends — this is UI convenience, not the security boundary)
   adminPending: () => client.get("/kyc/admin/pending"),
-  adminGet:     (id) => client.get(`/kyc/admin/${id}`),
+  adminGet:     (id) => client.get(`/kyc/admin/${id}`, { timeout: 300000 }),
   adminReview:  (id, decision, notes) => client.post(`/kyc/admin/${id}/review`, { decision, notes }),
 };
 
