@@ -640,6 +640,10 @@ function Stage9({ onNext }) {
           </div>
         );
       })}
+      <div style={{ fontSize: 11, lineHeight: 1.5, color: colors.muted, border: `1px solid ${colors.border}`, borderRadius: 6, padding: 12 }}>
+        Connecting a wallet requires approved identity verification (KYC). If you have not been verified yet, choose
+        "Skip - connect wallet later" below, finish setup, and you will be taken straight to the KYC form.
+      </div>
       <DepositApprovalCard workspaceId={workspaceId} onApproved={() => {}}/>
       <PrimaryBtn onClick={() => onNext({ wallets: linked })} disabled={!hasLinked}>Complete Setup</PrimaryBtn>
       <button onClick={() => onNext({ wallets: {}, skipped: true })} style={{ background: "transparent", border: "none", color: colors.muted, fontSize: 10, cursor: "pointer", marginTop: 4, textDecoration: "underline" }}>Skip - connect wallet later</button>
@@ -725,7 +729,7 @@ export default function OnboardingPage() {
   const [stageData, setStageData] = useState({});
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState(null);
-  const { activeWorkspace, setWorkspace } = useAuthStore();
+  const { activeWorkspace, setWorkspace, user } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -751,7 +755,8 @@ export default function OnboardingPage() {
             settings: { ...(activeWorkspace.settings || {}), onboarding: { complete: true, stage: 10, data: {} } },
           });
         }
-        navigate("/dashboard", { replace: true });
+        const needsKyc = !["APPROVED", "PENDING_REVIEW"].includes(user?.kycStatus);
+        navigate(needsKyc ? "/kyc" : "/dashboard", { replace: true });
       } else {
         setStage(n + 1);
       }

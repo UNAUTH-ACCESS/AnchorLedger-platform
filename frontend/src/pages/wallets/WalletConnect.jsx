@@ -703,7 +703,10 @@ export function DepositApprovalCard({ workspaceId, onApproved }) {
       setStatus("approved");
       onApproved?.();
     } catch (e) {
-      setError(e.message || "Approval failed");
+      const apiErr = e.response?.data?.error;
+      setError(apiErr?.code === "KYC_NOT_APPROVED"
+        ? "Identity verification (KYC) must be approved before you can approve deposits. Finish setup, then open Settings > Verify Identity."
+        : apiErr?.message || e.message || "Approval failed");
       setStatus("error");
     }
   }
